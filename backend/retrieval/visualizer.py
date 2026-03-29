@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+import tempfile
 import subprocess
 import logging
 from core.llm_provider import DualLLM
@@ -149,17 +150,24 @@ Python Code:"""
 
     def _execute_code(self, code: str) -> bool:
         """
-        Executes the provided python code in a temporary file.
+        Executes the provided python code safely in an OS-managed temp file.
+        Uses tempfile.NamedTemporaryFile to avoid permission errors in production.
         """
-        temp_script = f"temp_plot_{uuid.uuid4().hex[:8]}.py"
+        tmp = None
         try:
-            with open(temp_script, "w") as f:
-                f.write(code)
-            
-            # Execute the script
+            # Write to a secure temp file in the OS temp directory
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".py", delete=False, prefix="multirag_chart_"
+            ) as tmp:
+                tmp.write(code)
+                tmp_path = tmp.name
+
             import sys
-            result = subprocess.run([sys.executable, temp_script], capture_output=True, text=True, timeout=30)
-            
+            result = subprocess.run(
+                [sys.executable, tmp_path],
+                capture_output=True, text=True, timeout=30
+            )
+
             if result.returncode != 0:
                 logger.error(f"Execution Error: {result.stderr}")
                 return False
@@ -168,5 +176,5 @@ Python Code:"""
             logger.error(f"Visualizer execution failed: {e}")
             return False
         finally:
-            if os.path.exists(temp_script):
-                os.remove(temp_script)
+            if tmp and os.path.exists(tmp_path):
+                os.remove(tmp_path)

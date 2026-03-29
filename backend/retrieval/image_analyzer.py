@@ -1,7 +1,9 @@
 import os
+import io
 import base64
 import logging
 import httpx
+from PIL import Image
 from core.llm_provider import DualLLM
 
 logger = logging.getLogger(__name__)
@@ -17,6 +19,32 @@ class ImageAnalyzer:
     def __init__(self):
         self.llm = DualLLM()
         self.ocr_reader = None
+        self.max_image_dimension = 1024  # Max px dimension before resizing
+
+    def _preprocess_image(self, image_bytes: bytes, ext: str) -> bytes:
+        """
+        Resize large images to fit within max_image_dimension while preserving
+        aspect ratio. This reduces payload size, prevents vision model timeouts,
+        and improves OCR accuracy by keeping images at a consistent scale.
+        """
+        try:
+            img = Image.open(io.BytesIO(image_bytes))
+            w, h = img.size
+
+            if max(w, h) > self.max_image_dimension:
+                scale = self.max_image_dimension / max(w, h)
+                new_size = (int(w * scale), int(h * scale))
+                img = img.resize(new_size, Image.LANCZOS)
+                logger.info(f"ImageAnalyzer: Resized image from {w}x{h} → {new_size[0]}x{new_size[1]}")
+
+            # Re-encode to bytes
+            fmt = "JPEG" if ext in (".jpg", ".jpeg") else "PNG"
+            output = io.BytesIO()
+            img.save(output, format=fmt, optimize=True)
+            return output.getvalue()
+        except Exception as e:
+            logger.warning(f"ImageAnalyzer: Preprocessing failed, using original: {e}")
+            return image_bytes
 
     def _get_ocr_reader(self):
         if self.ocr_reader is None:
@@ -57,7 +85,14 @@ class ImageAnalyzer:
             # Read and encode the image
             with open(image_path, "rb") as f:
                 image_bytes = f.read()
-            
+
+            # Determine file type early so preprocessing can use it
+            ext = os.path.splitext(image_path)[1].lower()
+            mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
+            mime_type = mime_map.get(ext, "image/png")
+
+            # Preprocess: resize if oversized to reduce latency and prevent timeouts
+            image_bytes = self._preprocess_image(image_bytes, ext)
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
             
             # --- Extract text using OCR ---
@@ -72,11 +107,6 @@ class ImageAnalyzer:
                 except Exception as e:
                     logger.warning(f"ImageAnalyzer: OCR failed: {e}")
             
-            # Determine file type
-            ext = os.path.splitext(image_path)[1].lower()
-            mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
-            mime_type = mime_map.get(ext, "image/png")
-
             # Try Gemini Vision first (it handles images natively)
             if self.llm.gemini_llm:
                 try:

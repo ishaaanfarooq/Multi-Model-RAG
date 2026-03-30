@@ -275,8 +275,35 @@ export default function QueryPanel() {
 
   // Shared SSE data handler — returns true if it's the final response
   const handleSSEData = (data: any): boolean => {
+    if (data.model === "Final Response" && data.status === "Processing" && data.action === "Streaming") {
+      setMessages((prev) => {
+        const idx = prev.findIndex(m => m.id === "streaming-ai-msg");
+        const chunk = data.details?.answer_chunk || "";
+        
+        if (idx >= 0) {
+          const updated = [...prev];
+          updated[idx] = {
+            ...updated[idx],
+            content: updated[idx].content + chunk
+          };
+          return updated;
+        } else {
+          const streamingMsg: Message = {
+            id: "streaming-ai-msg",
+            role: "assistant",
+            content: chunk,
+            timestamp: new Date(),
+            pipeline: [...stagesRef.current]
+          };
+          return [...prev, streamingMsg];
+        }
+      });
+      return false;
+    }
+
     if (data.model === "Final Response" && data.status === "Completed") {
       setMessages((prev) => {
+        const filtered = prev.filter(m => m.id !== "streaming-ai-msg");
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
@@ -290,7 +317,7 @@ export default function QueryPanel() {
             stage.model === data.model ? data : stage
           ),
         };
-        return [...prev, aiMsg];
+        return [...filtered, aiMsg];
       });
 
       setIsProcessing(false);

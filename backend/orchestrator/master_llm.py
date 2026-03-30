@@ -137,12 +137,16 @@ Rewritten:"""
 
                 # Generate answer directly from image context only
                 yield emit("Generation", "Processing", "Synthesizing answer from image analysis data")
-                answer = await self.generator.generate_answer(
+                answer_chunks = []
+                async for chunk in self.generator.generate_answer_stream(
                     search_query,
                     [f"[Image Analysis]:\n{image_context}"],
                     sources=["Uploaded Image"],
                     mode="analytical"
-                )
+                ):
+                    answer_chunks.append(chunk)
+                    yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
+                answer = "".join(answer_chunks)
                 yield emit("Generation", "Completed", "Answer generated from image analysis")
 
                 # Run verification against the image context
@@ -212,12 +216,16 @@ Rewritten:"""
         if tool == "Vision_Analysis":
             if image_context:
                 yield emit("Vision Analysis", "Processing", "Analyzing query against visual content")
-                answer = await self.generator.generate_answer(
+                answer_chunks = []
+                async for chunk in self.generator.generate_answer_stream(
                     search_query,
                     [f"[Image Analysis]:\n{image_context}"],
                     sources=["Uploaded Image"],
                     mode="analytical"
-                )
+                ):
+                    answer_chunks.append(chunk)
+                    yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
+                answer = "".join(answer_chunks)
                 yield emit("Vision Analysis", "Completed", "Answer generated from visual data")
                 final_details = {
                     "answer": answer, 
@@ -235,10 +243,14 @@ Rewritten:"""
         if tool == "Direct_Chat":
             yield emit("Direct Chat", "Processing", "Engaging directly without retrieval")
             try:
-                answer = await self.generator.generate_answer(
+                answer_chunks = []
+                async for chunk in self.generator.generate_answer_stream(
                     search_query,
                     mode="conversational"
-                )
+                ):
+                    answer_chunks.append(chunk)
+                    yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
+                answer = "".join(answer_chunks)
                 yield emit("Direct Chat", "Completed", "Answer generated")
                 final_details = {"answer": answer, "sources": []}
                 self.cache.set(query, history, image_context, final_details)
@@ -306,7 +318,11 @@ Rewritten:"""
                     if "User-provided Data" not in sources:
                         sources.append("User-provided Data")
 
-                answer = await self.generator.generate_answer(search_query, gen_context, sources=sources, mode="analytical")
+                answer_chunks = []
+                async for chunk in self.generator.generate_answer_stream(search_query, gen_context, sources=sources, mode="analytical"):
+                    answer_chunks.append(chunk)
+                    yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
+                answer = "".join(answer_chunks)
                 yield emit("Generation", "Completed", "Answer drafted successfully")
 
                 # Verification & Visualization with Self-Healing Loop
@@ -412,7 +428,11 @@ Rewritten:"""
             if "User-provided Data" not in sources:
                 sources.append("User-provided Data")
 
-        answer = await self.generator.generate_answer(search_query, gen_context, sources=list(set(sources)), mode="analytical")
+        answer_chunks = []
+        async for chunk in self.generator.generate_answer_stream(search_query, gen_context, sources=list(set(sources)), mode="analytical"):
+            answer_chunks.append(chunk)
+            yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
+        answer = "".join(answer_chunks)
         yield emit("Generation", "Completed", "Answer drafted successfully")
 
         # Verification & Visualization with Self-Healing Loop

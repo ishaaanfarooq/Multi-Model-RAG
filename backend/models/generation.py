@@ -1,3 +1,4 @@
+from typing import AsyncGenerator
 from core.llm_provider import DualLLM
 from langchain_core.prompts import PromptTemplate
 
@@ -88,3 +89,20 @@ Response:"""
         
         response = self.llm.invoke(formatted_prompt)
         return response.strip()
+
+    async def generate_answer_stream(self, query: str, context: list[str] = None, sources: list[str] = None, mode: str = "analytical") -> AsyncGenerator[str, None]:
+        persona_str = ""
+        if self.persona_memory:
+            persona_str = self.persona_memory.get_persona_context("Generator")
+            
+        if mode == "conversational":
+            formatted_prompt = self.conversational_template.format(query=query, persona=persona_str)
+        else:
+            if not context:
+                yield "No relevant context found to answer the query."
+                return
+            context_str = self._build_numbered_context(context, sources)
+            formatted_prompt = self.analytical_template.format(context=context_str, query=query, persona=persona_str)
+        
+        async for chunk in self.llm.astream(formatted_prompt):
+            yield chunk

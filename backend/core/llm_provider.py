@@ -1,6 +1,6 @@
 import os
 import logging
-from typing import Any
+from typing import Any, AsyncGenerator
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.llms import Ollama
 from dotenv import load_dotenv
@@ -50,6 +50,26 @@ class DualLLM:
         
         # Fallback to Llama
         return self.llama_llm.invoke(prompt)
+
+    async def astream(self, prompt: str) -> AsyncGenerator[str, None]:
+        """
+        Try streaming from Gemini first, then fallback to Llama.
+        """
+        if self.gemini_llm:
+            try:
+                async for chunk in self.gemini_llm.astream(prompt):
+                    yield chunk.content
+                return
+            except Exception as e:
+                logger.warning(f"Gemini streaming failed, falling back to Llama: {e}")
+        
+        # Fallback to Llama streaming
+        try:
+            async for chunk in self.llama_llm.astream(prompt):
+                yield chunk
+        except Exception as e:
+            logger.error(f"Llama streaming failed: {e}")
+            yield self.llama_llm.invoke(prompt)
 
 def get_llm(llama_model: str = "llama3.2"):
     return DualLLM(llama_model=llama_model)

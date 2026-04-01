@@ -12,6 +12,7 @@ from retrieval.visualizer import VisualizerAgent
 from retrieval.web_search import search_web
 from core.memory_manager import NotebookMemory
 from core.persona_memory import AgentPersonaMemory
+from utils.cache import ResponseCache
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +29,7 @@ class MasterOrchestrator:
         self.verifier = VerificationModule()
         self.visualizer = VisualizerAgent(persona_memory=self.persona_memory)
         self.notebook = NotebookMemory()
+        self.cache = ResponseCache()
         self.last_image_context = "" # Persist last analyzed image context
         
     async def process_query_stream(self, query: str, history: str = "", image_context: str = "") -> AsyncGenerator[str, None]:
@@ -105,6 +107,13 @@ Rewritten:"""
                 logger.info("Reusing previous image context for follow-up query.")
                 image_context = self.last_image_context
 
+        # Check cache (after resolving potential image context)
+        cached_response = self.cache.get(query, history, image_context)
+        if cached_response:
+            yield emit("Cache Manager", "Completed", "Cache hit! Retrieved answer instantly.")
+            yield emit("Final Response", "Completed", "Pipeline finished", cached_response)
+            return
+
         if image_context:
             image_keywords = ["photo", "image", "picture", "screenshot", "uploaded", "this", "that", "it",
                               "describe", "written", "show", "see", "look", "what is", "what's",
@@ -147,11 +156,13 @@ Rewritten:"""
                 # Save to notebook
                 self.notebook.save_entry(query, answer, ["Uploaded Image"])
 
-                yield emit("Final Response", "Completed", "Pipeline finished", {
+                final_details = {
                     "answer": answer,
                     "sources": ["Uploaded Image"],
                     "source_map": {"1": "Uploaded Image"}
-                })
+                }
+                self.cache.set(query, history, image_context, final_details)
+                yield emit("Final Response", "Completed", "Pipeline finished", final_details)
                 return
             else:
                 # Image is supplementary — enrich the search query with visual data
@@ -208,11 +219,13 @@ Rewritten:"""
                     mode="analytical"
                 )
                 yield emit("Vision Analysis", "Completed", "Answer generated from visual data")
-                yield emit("Final Response", "Completed", "Done", {
+                final_details = {
                     "answer": answer, 
                     "sources": ["Uploaded Image"],
                     "source_map": {"1": "Uploaded Image"}
-                })
+                }
+                self.cache.set(query, history, image_context, final_details)
+                yield emit("Final Response", "Completed", "Done", final_details)
                 return
             else:
                 yield emit("Vision Analysis", "Completed", "No image provided for visual analysis — falling back to Web Search")
@@ -227,7 +240,9 @@ Rewritten:"""
                     mode="conversational"
                 )
                 yield emit("Direct Chat", "Completed", "Answer generated")
-                yield emit("Final Response", "Completed", "Done", {"answer": answer, "sources": []})
+                final_details = {"answer": answer, "sources": []}
+                self.cache.set(query, history, image_context, final_details)
+                yield emit("Final Response", "Completed", "Done", final_details)
             except Exception as e:
                 logger.error(f"Direct chat failed: {e}")
             return
@@ -352,6 +367,7 @@ Rewritten:"""
                 # Save metadata to the analytical notebook
                 self.notebook.save_entry(query, answer, sources)
 
+                self.cache.set(query, history, image_context, final_details)
                 yield emit("Final Response", "Completed", "Pipeline finished", final_details)
                 return
 
@@ -458,4 +474,5 @@ Rewritten:"""
         # Save metadata to the analytical notebook
         self.notebook.save_entry(query, answer, list(set(sources)))
             
+        self.cache.set(query, history, image_context, final_details)
         yield emit("Final Response", "Completed", "Pipeline finished", final_details)

@@ -20,3 +20,4 @@ seaborn==0.13.2
 langchain-google-genai==1.0.1
 easyocr==1.7.1
 Pillow==10.2.0
+redis==5.0.4

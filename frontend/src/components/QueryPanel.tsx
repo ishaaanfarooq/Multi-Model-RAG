@@ -10,6 +10,7 @@ type Message = {
   content: string;
   sources?: string[];
   timestamp: Date;
+  pipeline?: PipelineStage[];
 };
 
 type PipelineStage = {
@@ -24,7 +25,7 @@ export default function QueryPanel() {
       id: "welcome",
       role: "system",
       content:
-        "Welcome to MultiModel RAG. Upload documents or crawl a website first, then ask questions about the ingested content.",
+        "Welcome to your Professional AI Workspace. Please upload your knowledge base documents or crawl your target websites to begin. What can I help you analyze today?",
       timestamp: new Date(),
     },
   ]);
@@ -77,9 +78,10 @@ export default function QueryPanel() {
           const aiMsg: Message = {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: data.details?.answer || "No response generated.",
+            content: data.details?.answer || "Analytical synthesis produced no tangible result.",
             sources: data.details?.sources || [],
             timestamp: new Date(),
+            pipeline: [...liveStages, data],
           };
           setMessages((prev) => [...prev, aiMsg]);
           setIsProcessing(false);
@@ -87,7 +89,7 @@ export default function QueryPanel() {
           eventSource.close();
         }
       } catch (err) {
-        console.error("SSE parse error:", err);
+        console.error("Critical SSE parse error:", err);
       }
     };
 
@@ -95,7 +97,7 @@ export default function QueryPanel() {
       const errorMsg: Message = {
         id: (Date.now() + 2).toString(),
         role: "system",
-        content: "Connection lost. Make sure the backend server is running on port 8000.",
+        content: "Network integrity compromised. Ensure your local framework host is active on Port 8000.",
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -103,45 +105,75 @@ export default function QueryPanel() {
       setLiveStages([]);
       eventSource.close();
     };
-  }, [input, isProcessing]);
+  }, [input, isProcessing, liveStages]);
+
+  const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
+    <div className="flex flex-col gap-2 p-4 bg-[#FAF9F6] border border-[#F1F1EF] rounded-3xl mt-4 max-w-[500px]">
+      <p className="text-[10px] font-bold text-[#B45309] uppercase tracking-[0.1em] mb-2 opacity-80">Pipeline Execution Path</p>
+      {stages.map((stage, i) => (
+        <div key={i} className="flex items-center gap-3 text-[11px] font-medium text-[#71717A]">
+          <span className={`w-1.5 h-1.5 rounded-full ${
+            stage.status === 'Processing' ? 'bg-[#FF9100] animate-pulse' : 
+            stage.status === 'Completed' ? 'bg-[#16A34A]' : 'bg-[#E4E4E5]'
+          }`} />
+          <span className="text-[#18181B] font-bold min-w-[140px]">{stage.model}</span>
+          <span className="truncate opacity-70 italic">{stage.action}</span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-[var(--color-border)]">
-        <h2 className="text-xl font-bold tracking-tight">💬 Chat with your Knowledge Base</h2>
-        <p className="text-xs text-[var(--color-muted)] mt-1">
-          Ask questions about your ingested documents and crawled websites
-        </p>
+    <div className="flex flex-col h-full bg-white relative">
+      {/* Structural Header */}
+      <div className="px-10 py-8 border-b border-[#F1F1EF] bg-white z-10 flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-[#18181B] font-heading">
+            Neural Analysis Interface
+          </h2>
+          <p className="text-xs font-medium text-[#71717A] mt-1.5 uppercase tracking-wide opacity-60">
+            Professional Multi-Agent Retrieval Framework
+          </p>
+        </div>
+        <div className="flex items-center gap-4">
+           {isProcessing && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
+                Processing
+              </div>
+           )}
+        </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      {/* Message Feed */}
+      <div className="flex-1 overflow-y-auto px-10 py-10 space-y-8">
         {messages.map((msg) => (
           <div
             key={msg.id}
-            className={`animate-slide-up ${
-              msg.role === "user" ? "flex justify-end" : "flex justify-start"
-            }`}
+            className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"} animate-structural-up`}
           >
             <div
-              className={`max-w-[75%] rounded-2xl px-5 py-3 ${
-                msg.role === "user"
-                  ? "accent-gradient text-white"
-                  : msg.role === "system"
-                  ? "bg-[var(--color-surface-hover)] border border-[var(--color-border)] text-[var(--color-muted)]"
-                  : "glass-panel-solid"
+              className={`max-w-[800px] ${
+                msg.role === "user" ? "bubble-user" : 
+                msg.role === "system" ? "text-center mx-auto text-[11px] text-[#71717A] italic opacity-60 py-4 max-w-[400px]" : 
+                "bubble-ai"
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+              {msg.role === "assistant" && msg.pipeline && (
+                <StageDisplay stages={msg.pipeline} />
+              )}
+              <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-[#27272A]" : ""}`}>
+                {msg.content}
+              </div>
+              
               {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-3 pt-2 border-t border-[var(--color-border)]">
-                  <p className="text-[10px] uppercase font-semibold text-[var(--color-muted)] tracking-wider mb-1">
-                    Sources
+                <div className="mt-6 pt-4 border-t border-[#F1F1EF]">
+                  <p className="text-[10px] uppercase font-bold text-[#B45309] tracking-widest mb-3">
+                    Verification Ingress Sources
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {msg.sources.map((src, i) => (
-                      <span key={i} className="badge badge-info text-[10px]">
+                      <span key={i} className="px-2 py-1 bg-[#FAF9F6] border border-[#F1F1EF] text-[#71717A] rounded-lg text-[10px] font-bold">
                         {src}
                       </span>
                     ))}
@@ -149,79 +181,60 @@ export default function QueryPanel() {
                 </div>
               )}
             </div>
+            <span className="text-[10px] text-[#A1A1AA] font-bold mt-2 px-2 uppercase tracking-tighter opacity-50">
+              {msg.role} • {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
           </div>
         ))}
 
-        {/* Live Pipeline Stages */}
-        {isProcessing && liveStages.length > 0 && (
-          <div className="animate-slide-up glass-panel p-4 space-y-2">
-            <p className="text-xs font-semibold text-[var(--color-accent)] uppercase tracking-wider">
-              Pipeline Processing...
-            </p>
-            {liveStages.map((stage, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 text-xs"
-              >
-                <div
-                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                    stage.status === "Processing"
-                      ? "bg-[var(--color-warning)] animate-pulse"
-                      : stage.status === "Completed"
-                      ? "bg-[var(--color-success)]"
-                      : "bg-[var(--color-muted)]"
-                  }`}
-                />
-                <span className="font-medium text-[var(--color-foreground)]">
-                  {stage.model}
-                </span>
-                <span className="text-[var(--color-muted)] truncate">{stage.action}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {isProcessing && liveStages.length === 0 && (
-          <div className="flex justify-start animate-slide-up">
-            <div className="glass-panel px-5 py-3">
-              <div className="flex gap-1.5">
-                <div className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-bounce" style={{ animationDelay: "0ms" }} />
-                <div className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-bounce" style={{ animationDelay: "150ms" }} />
-                <div className="w-2 h-2 rounded-full bg-[var(--color-accent)] animate-bounce" style={{ animationDelay: "300ms" }} />
-              </div>
-            </div>
+        {/* Live Pipeline Processing Module */}
+        {isProcessing && (
+          <div className="flex flex-col items-start animate-structural-up">
+             <div className="bubble-ai border-amber-200/50 bg-[#FFFCF8]">
+                <div className="flex items-center gap-3 mb-4">
+                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                   <span className="text-[11px] font-bold text-amber-700 uppercase tracking-widest">Active Neural Routing...</span>
+                </div>
+                <StageDisplay stages={liveStages} />
+             </div>
           </div>
         )}
 
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Bar */}
-      <div className="px-6 py-4 border-t border-[var(--color-border)]">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex gap-3"
-        >
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question about your documents..."
-            className="input-dark flex-1"
-            disabled={isProcessing}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isProcessing}
-            className="btn-primary whitespace-nowrap"
+      {/* Structural Input Area */}
+      <div className="px-10 py-10 border-t border-[#F1F1EF] bg-white">
+        <div className="max-w-4xl mx-auto relative group">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSend();
+            }}
+            className="flex gap-4 items-center bg-[#FCFBFA] border-2 border-[#F1F1EF] p-2 pr-4 rounded-[28px] focus-within:border-[#B45309] focus-within:bg-white shadow-sm transition-all duration-300"
           >
-            {isProcessing ? "Processing..." : "Send →"}
-          </button>
-        </form>
+            <div className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-xl text-[#B45309]">✨</div>
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Submit query to the MultiModel RAG Framework..."
+              className="flex-1 bg-transparent border-none outline-none text-[#18181B] font-medium text-[15px] placeholder:text-[#A1A1AA]"
+              disabled={isProcessing}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isProcessing}
+              className="btn-premium rounded-[20px] py-3 shadow-md"
+            >
+              {isProcessing ? "Processing" : "Analyze →"}
+            </button>
+          </form>
+          <p className="text-[10px] font-bold text-[#71717A] text-center mt-4 uppercase tracking-[0.2em] opacity-40">
+            Secured Contextual Retrieval • Local Intelligence
+          </p>
+        </div>
       </div>
     </div>
   );

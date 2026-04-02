@@ -1,0 +1,33 @@
+# --- MultiModelRAG Ignore Rules ---
+
+# Next.js
+.next/
+out/
+build/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.env
+.venv
+env/
+active_venv/
+
+# Application Specific
+backend/faiss_index/
+backend/uploads/
+*.db
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db

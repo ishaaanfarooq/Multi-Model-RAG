@@ -248,11 +248,13 @@ Rewritten:"""
                     logger.warning("Query expansion failed, using original query.")
                     queries = [search_query]
                 
-                # Perform searches in parallel if possible, but sequential is safer for rate limits
+                # Perform searches in parallel using asyncio.gather
+                tasks = [search_web(q, max_results=3) for q in queries]
+                search_results = await asyncio.gather(*tasks)
+                
                 all_docs = []
                 all_sources = []
-                for q in queries:
-                    doc_texts, sources = await search_web(q, max_results=3)
+                for doc_texts, sources in search_results:
                     all_docs.extend(doc_texts)
                     all_sources.extend(sources)
 
@@ -293,7 +295,7 @@ Rewritten:"""
                 yield emit("Generation", "Completed", "Answer drafted successfully")
 
                 # Verification & Visualization with Self-Healing Loop
-                max_retries = 1
+                max_retries = 0
                 retry_count = 0
                 is_valid = False
                 chart_filename = None
@@ -398,7 +400,7 @@ Rewritten:"""
         yield emit("Generation", "Completed", "Answer drafted successfully")
 
         # Verification & Visualization with Self-Healing Loop
-        max_retries = 1
+        max_retries = 0
         retry_count = 0
         is_valid = False
         chart_filename = None

@@ -299,12 +299,16 @@ Rewritten:"""
                 chart_filename = None
                 warning = None
 
+                viz_context = gen_context
+                if has_rich_data:
+                    viz_context = [f"[User Provided Data]:\n{query}"]
+
                 while retry_count <= max_retries and not is_valid:
                     yield emit("Verification & Visualization", "Processing", "Running fact-check and chart generation concurrently...")
                     
                     async def safe_visualize():
                         try:
-                            return await self.visualizer.run(gen_context, answer)
+                            return await self.visualizer.run(viz_context, answer)
                         except Exception as e:
                             logger.error(f"Visualizer failed: {e}")
                             return None
@@ -400,12 +404,16 @@ Rewritten:"""
         chart_filename = None
         warning = None
 
+        viz_context = gen_context
+        if has_rich_data:
+            viz_context = [f"[User Provided Data]:\n{query}"]
+
         while retry_count <= max_retries and not is_valid:
             yield emit("Verification & Visualization", "Processing", "Running fact-check and chart generation concurrently...")
             
             async def safe_visualize():
                 try:
-                    return await self.visualizer.run(gen_context, answer)
+                    return await self.visualizer.run(viz_context, answer)
                 except Exception as e:
                     logger.error(f"Visualizer failed: {e}")
                     return None

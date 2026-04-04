@@ -275,6 +275,20 @@ Rewritten:"""
                 gen_context = doc_texts
                 if image_context:
                     gen_context = [f"[Image Analysis]:\n{image_context}"] + doc_texts
+                
+                # Inject user-provided data if the query contains rich data points
+                import re
+                has_rich_data = False
+                if any(char in query for char in ["$", "%", "="]) or any(kw in query.lower() for kw in ["is ", "are ", "value ", "ratio "]):
+                    numbers = re.findall(r'\d+', query)
+                    if len(numbers) >= 3:
+                        has_rich_data = True
+                if has_rich_data:
+                    logger.info("Detected user-provided data in query. Injecting into generation context.")
+                    gen_context = [f"[User Provided Data]:\n{query}"] + gen_context
+                    if "User-provided Data" not in sources:
+                        sources.append("User-provided Data")
+
                 answer = await self.generator.generate_answer(search_query, gen_context, sources=sources, mode="analytical")
                 yield emit("Generation", "Completed", "Answer drafted successfully")
 
@@ -290,12 +304,12 @@ Rewritten:"""
                     
                     async def safe_visualize():
                         try:
-                            return await self.visualizer.run(doc_texts, answer)
+                            return await self.visualizer.run(gen_context, answer)
                         except Exception as e:
                             logger.error(f"Visualizer failed: {e}")
                             return None
                             
-                    verify_task = asyncio.create_task(self.verifier.verify(answer, doc_texts))
+                    verify_task = asyncio.create_task(self.verifier.verify(answer, gen_context))
                     visualize_task = asyncio.create_task(safe_visualize())
                     
                     is_valid_data, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
@@ -362,6 +376,20 @@ Rewritten:"""
         gen_context = ranked_docs
         if image_context:
             gen_context = [f"[Image Analysis]:\n{image_context}"] + ranked_docs
+            
+        # Inject user-provided data if the query contains rich data points
+        import re
+        has_rich_data = False
+        if any(char in query for char in ["$", "%", "="]) or any(kw in query.lower() for kw in ["is ", "are ", "value ", "ratio "]):
+            numbers = re.findall(r'\d+', query)
+            if len(numbers) >= 3:
+                has_rich_data = True
+        if has_rich_data:
+            logger.info("Detected user-provided data in query. Injecting into generation context.")
+            gen_context = [f"[User Provided Data]:\n{query}"] + gen_context
+            if "User-provided Data" not in sources:
+                sources.append("User-provided Data")
+
         answer = await self.generator.generate_answer(search_query, gen_context, sources=list(set(sources)), mode="analytical")
         yield emit("Generation", "Completed", "Answer drafted successfully")
 
@@ -377,12 +405,12 @@ Rewritten:"""
             
             async def safe_visualize():
                 try:
-                    return await self.visualizer.run(ranked_docs, answer)
+                    return await self.visualizer.run(gen_context, answer)
                 except Exception as e:
                     logger.error(f"Visualizer failed: {e}")
                     return None
                     
-            verify_task = asyncio.create_task(self.verifier.verify(answer, ranked_docs))
+            verify_task = asyncio.create_task(self.verifier.verify(answer, gen_context))
             visualize_task = asyncio.create_task(safe_visualize())
             
             is_valid_data, current_chart_filename = await asyncio.gather(verify_task, visualize_task)

@@ -147,6 +147,28 @@ Rewritten:"""
             yield emit("Agent Router", "Completed", f"Fallback to Default Tool: [{tool}] (Error: {str(e)[:60]})")
 
 
+        # ─── AMBIGUOUS QUERY branch (Human-in-the-Loop) ───────────────────────
+        if tool == "Ambiguous_Query":
+            yield emit("Agent Router", "Processing", "Query detected as highly ambiguous. Pausing pipeline to ask for clarification...")
+            clarification_prompt = (
+                f"The user's query '{search_query}' is highly ambiguous, too short, or lacks context. "
+                f"Draft a very brief, polite response asking the user to clarify their intent. "
+                f"If possible, provide 2 or 3 likely interpretations they might mean."
+            )
+            try:
+                answer = await self.generator.generate_answer(clarification_prompt, mode="conversational")
+            except Exception as e:
+                logger.error(f"Clarification generation failed: {e}")
+                answer = f"Your query '{search_query}' is a bit ambiguous. Could you please clarify what exactly you are looking for?"
+            
+            yield emit("Agent Router", "Completed", "Clarification requested from user")
+            # We safely exit the pipeline and wait for the user to reply in the chat.
+            yield emit("Final Response", "Completed", "Awaiting human input", {
+                "answer": answer,
+                "sources": []
+            })
+            return
+
         # ─── VISION ANALYSIS branch ───────────────────────────────────────────
         if tool == "Vision_Analysis":
             if image_context:

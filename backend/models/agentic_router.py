@@ -18,12 +18,13 @@ class AgentRouter:
         
         self.prompt_template = PromptTemplate(
             input_variables=["query"],
-            template='''You are an intelligent autonomous Agent Router. Your job is to classify the user's query into EXACTLY ONE of the following three Tool categories:
+            template='''You are an intelligent autonomous Agent Router. Your job is to classify the user's query into EXACTLY ONE of the following tool categories:
 
 1. "Search_Knowledge_Base": Choose this ONLY if the user explicitly asks about uploaded/ingested private documents, a specific website they crawled, or content that clearly came from their personal knowledge base.
 2. "Web_Search": Choose this if the user is asking for live or real-time information, facts about public entities, or general world knowledge that a search engine would answer.
 3. "Vision_Analysis": Choose this if the user is asking about an image, a picture, a screenshot, or specifically mentions "the image", "what's in the photo", or "read this text" (referring to an uploaded file).
 4. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
+5. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
 
 User Query: "{query}"
 
@@ -41,7 +42,9 @@ Tool Selection:'''
             response = self.llm.invoke(prompt).strip()
             
             # Clean up response in case LLM gets chatty
-            if "Web_Search" in response:
+            if "Ambiguous_Query" in response:
+                return "Ambiguous_Query"
+            elif "Web_Search" in response:
                 return "Web_Search"
             elif "Vision_Analysis" in response:
                 return "Vision_Analysis"

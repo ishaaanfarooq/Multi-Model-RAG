@@ -76,7 +76,7 @@ export default function QueryPanel() {
     ]);
   }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   
   // Use a ref for liveStages to capture them in the SSE callback without re-creating handleSend
   const stagesRef = useRef<PipelineStage[]>([]);
@@ -183,6 +183,9 @@ export default function QueryPanel() {
     
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto';
+    }
     setIsProcessing(true);
     setLiveStages([]);
 
@@ -575,7 +578,7 @@ export default function QueryPanel() {
               e.preventDefault();
               handleSend();
             }}
-            className="flex gap-3 items-center bg-[#FCFBFA] border-2 border-[#F1F1EF] p-2 pr-4 rounded-[28px] focus-within:border-[#B45309] focus-within:bg-white shadow-sm transition-all duration-300"
+            className="flex gap-3 items-end bg-[#FCFBFA] border-2 border-[#F1F1EF] p-2 pr-4 rounded-[28px] focus-within:border-[#B45309] focus-within:bg-white shadow-sm transition-all duration-300"
           >
             {/* Image Upload Button */}
             <input
@@ -596,13 +599,25 @@ export default function QueryPanel() {
               📎
             </button>
 
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(e) => {
+                setInput(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (input.trim() && !isProcessing) {
+                    handleSend();
+                  }
+                }
+              }}
+              rows={1}
               placeholder={isListening ? "🎤 Listening... speak now" : "Submit query to the MultiModel RAG Framework..."}
-              className="flex-1 bg-transparent border-none outline-none text-[#18181B] font-medium text-[15px] placeholder:text-[#A1A1AA]"
+              className="flex-1 bg-transparent border-none outline-none text-[#18181B] font-medium text-[15px] placeholder:text-[#A1A1AA] resize-none overflow-y-auto min-h-[24px] max-h-[200px] py-3"
               disabled={isProcessing}
             />
 

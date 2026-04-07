@@ -29,20 +29,29 @@ class ImageAnalyzer:
                 self.ocr_reader = "disabled"
         return self.ocr_reader if self.ocr_reader != "disabled" else None
 
-    async def analyze(self, image_path: str, query: str = "") -> str:
+    async def analyze(self, image_paths: list[str], query: str = "") -> str:
+        """
+        Analyze multiple images and return a combined text description.
+        """
+        if not image_paths:
+            return ""
+
+        results = []
+        for i, path in enumerate(image_paths):
+            if not os.path.exists(path):
+                logger.error(f"ImageAnalyzer: File not found: {path}")
+                results.append(f"[Image {i+1}: File not found]")
+                continue
+            
+            res = await self._analyze_single(path, query)
+            results.append(f"--- IMAGE {i+1} ANALYSIS ---\n{res}\n")
+            
+        return "\n".join(results)
+
+    async def _analyze_single(self, image_path: str, query: str = "") -> str:
         """
         Analyze an image and return a text description with extracted data.
-        
-        Args:
-            image_path: Path to the image file.
-            query: Optional user query for context-aware analysis.
-        
-        Returns:
-            A detailed text description of the image contents.
         """
-        if not os.path.exists(image_path):
-            logger.error(f"ImageAnalyzer: File not found: {image_path}")
-            return f"[Error: Image file not found at {image_path}]"
 
         try:
             # Read and encode the image
@@ -135,16 +144,17 @@ class ImageAnalyzer:
     def _build_prompt(self, query: str = "", ocr_text: str = "") -> str:
         """Build a focused analysis prompt for the vision model."""
         base_instruction = (
-            "Analyze the image and provide a comprehensive description. "
-            "IMPORTANT: If you see any tables, charts, or structured data, extract them exactly "
-            "as they appear. Use Markdown formatting for tables. Extract all visible text accurately. "
-            "Ensure numerical values are preserved without alteration."
+            "Analyze the image and provide a highly detailed, comprehensive description. "
+            "IMPORTANT: "
+            "1. If you see any tables, charts, or structured data, extract them exactly as they appear using Markdown. "
+            "2. Extract all visible text accurately. Ensure numerical values are preserved perfectly. "
+            "3. Reason deeply about the visual elements: explain the relationships between different parts of the image, the overall context, and any logical conclusions that can be drawn. Do not just list elements; synthesize what they mean together."
         )
         
         if ocr_text:
             base_instruction += f"\n\n[Extracted Text via OCR]:\n{ocr_text}\n"
 
         if query:
-            return f"{base_instruction}\n\nUser Question: {query}\n\nAnswer the user's question precisely using the visual information provided."
+            return f"{base_instruction}\n\nUser Question: {query}\n\nAnswer the user's question precisely and thoroughly using the visual information provided."
         
-        return f"{base_instruction}\n\nDescribe the main subject and extract all data points."
+        return f"{base_instruction}\n\nDescribe the main subject, extract all data points, and explain the deeper meaning of the image."

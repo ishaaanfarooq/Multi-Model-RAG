@@ -17,7 +17,7 @@ type Message = {
   warning?: string;
   timestamp: Date;
   pipeline?: PipelineStage[];
-  image?: string; // base64 preview of uploaded image
+  images?: string[]; // base64 previews of uploaded images
 };
 
 type PipelineStage = {
@@ -56,8 +56,8 @@ export default function QueryPanel() {
   const recognitionRef = useRef<any>(null);
   
   // Image upload state
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
   
   // Viewport/ImageViewer state
@@ -134,22 +134,29 @@ export default function QueryPanel() {
 
   // ─── Image Upload Logic ──────────────────────────────────────────
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedImage(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setSelectedImages(prev => [...prev, ...files]);
+      files.forEach(file => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setImagePreviews(prev => [...prev, reader.result as string]);
+        };
+        reader.readAsDataURL(file);
+      });
     }
   };
 
-  const clearImage = () => {
-    setSelectedImage(null);
-    setImagePreview(null);
-    if (imageInputRef.current) {
-      imageInputRef.current.value = "";
+  const clearImage = (index?: number) => {
+    if (index !== undefined) {
+      setSelectedImages(prev => prev.filter((_, i) => i !== index));
+      setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setSelectedImages([]);
+      setImagePreviews([]);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = "";
+      }
     }
   };
 
@@ -171,7 +178,7 @@ export default function QueryPanel() {
       role: "user",
       content: query,
       timestamp: new Date(),
-      image: imagePreview || undefined,
+      images: imagePreviews.length > 0 ? [...imagePreviews] : undefined,
     };
     
     setMessages((prev) => [...prev, userMsg]);
@@ -179,12 +186,14 @@ export default function QueryPanel() {
     setIsProcessing(true);
     setLiveStages([]);
 
-    // If we have an image, use POST with FormData
-    if (selectedImage) {
+    // If we have images, use POST with FormData
+    if (selectedImages.length > 0) {
       const formData = new FormData();
       formData.append("query", query);
       formData.append("history", formatHistory());
-      formData.append("image", selectedImage);
+      selectedImages.forEach((file) => {
+        formData.append("images", file);
+      });
 
       // For POST+SSE we need to use fetch + ReadableStream
       fetch(`${API_BASE}/api/stream`, {
@@ -259,7 +268,7 @@ export default function QueryPanel() {
         eventSource.close();
       };
     }
-  }, [input, isProcessing, selectedImage, imagePreview, messages]);
+  }, [input, isProcessing, selectedImages, imagePreviews, messages]);
 
   // Shared SSE data handler — returns true if it's the final response
   const handleSSEData = (data: any): boolean => {
@@ -423,16 +432,21 @@ export default function QueryPanel() {
                   <StageDisplay stages={msg.pipeline} />
                 )}
                 
-                {/* User image preview */}
-                {msg.role === "user" && msg.image && (
-                  <div 
-                    className="mb-3 rounded-xl overflow-hidden border border-white/20 max-w-[200px] cursor-pointer group/img relative"
-                    onClick={() => setViewerImage({ src: msg.image!, alt: "Uploaded image" })}
-                  >
-                    <img src={msg.image} alt="Uploaded" className="w-full h-auto group-hover:scale-105 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                       <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">View Full size</span>
-                    </div>
+                {/* User images preview */}
+                {msg.role === "user" && msg.images && msg.images.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {msg.images.map((imgSrc, idx) => (
+                      <div 
+                        key={idx}
+                        className="rounded-xl overflow-hidden border border-white/20 max-w-[150px] cursor-pointer group/img relative"
+                        onClick={() => setViewerImage({ src: imgSrc, alt: `Uploaded image ${idx + 1}` })}
+                      >
+                        <img src={imgSrc} alt="Uploaded" className="w-full h-auto group-hover:scale-105 transition-transform duration-500" />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                           <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">View Full size</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
 
@@ -528,20 +542,27 @@ export default function QueryPanel() {
       </div>
 
       {/* Image Preview Bar */}
-      {imagePreview && (
-        <div className="px-10 py-3 border-t border-[#F1F1EF] bg-[#FEFDFB] flex items-center gap-3">
-          <div className="relative group">
-            <img src={imagePreview} alt="Preview" className="w-14 h-14 rounded-xl object-cover border border-amber-200 shadow-sm" />
-            <button
-              onClick={clearImage}
-              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              ✕
-            </button>
-          </div>
-          <div>
-            <p className="text-[11px] font-bold text-[#18181B]">{selectedImage?.name}</p>
-            <p className="text-[10px] text-[#71717A]">Image attached — will be analyzed by Vision AI</p>
+      {imagePreviews.length > 0 && (
+        <div className="px-10 py-3 border-t border-[#F1F1EF] bg-[#FEFDFB] flex flex-wrap items-center gap-4">
+          {imagePreviews.map((preview, idx) => (
+            <div key={idx} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
+              <div className="relative group">
+                <img src={preview} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-amber-200" />
+                <button
+                  onClick={() => clearImage(idx)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="max-w-[100px]">
+                <p className="text-[10px] font-bold text-[#18181B] truncate">{selectedImages[idx]?.name}</p>
+              </div>
+            </div>
+          ))}
+          <div className="ml-auto flex items-center gap-3">
+            <p className="text-[10px] text-[#71717A]">Images attached — will be analyzed by Vision AI</p>
+            <button onClick={() => clearImage()} className="text-[10px] font-bold text-red-500 hover:underline">Clear All</button>
           </div>
         </div>
       )}
@@ -561,6 +582,7 @@ export default function QueryPanel() {
               ref={imageInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={handleImageSelect}
               className="hidden"
               id="image-upload"

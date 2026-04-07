@@ -145,36 +145,42 @@ async def pipeline_stream_with_image(
     request: Request,
     query: str = Form(...),
     history: str = Form(""),
-    image: UploadFile = File(None),
+    images: list[UploadFile] = File(default=[]),
 ):
     """
-    SSE endpoint that also accepts an optional image upload.
-    The image is analyzed by a vision model and the description is
+    SSE endpoint that also accepts multiple optional image uploads.
+    The images are analyzed by a vision model and their descriptions are
     injected into the RAG pipeline as additional context.
     """
     image_context = ""
+    img_paths = []
     
-    if image and image.filename:
-        # Save uploaded image
-        ext = os.path.splitext(image.filename)[1] or ".png"
-        img_filename = f"upload_{uuid.uuid4().hex[:8]}{ext}"
-        img_path = os.path.join("uploads", img_filename)
+    if images and len(images) > 0 and images[0].filename:
+        # Save uploaded images
+        for image in images:
+            if not image.filename:
+                continue
+            ext = os.path.splitext(image.filename)[1] or ".png"
+            img_filename = f"upload_{uuid.uuid4().hex[:8]}{ext}"
+            img_path = os.path.join("uploads", img_filename)
+            
+            content = await image.read()
+            with open(img_path, "wb") as f:
+                f.write(content)
+            img_paths.append(img_path)
         
-        content = await image.read()
-        with open(img_path, "wb") as f:
-            f.write(content)
-        
-        # Analyze image
-        image_context = await image_analyzer.analyze(img_path, query)
+        # Analyze images
+        if img_paths:
+            image_context = await image_analyzer.analyze(img_paths, query)
     
     async def event_generator():
         try:
-            # Emit image analysis step if image was provided
+            # Emit image analysis step if images were provided
             if image_context:
                 yield json.dumps({
                     "model": "Image Analyzer",
                     "status": "Completed",
-                    "action": "Extracted visual data from uploaded image"
+                    "action": f"Extracted visual data from {len(img_paths)} uploaded image(s)"
                 })
             
             async for event in orchestrator.process_query_stream(query, history, image_context=image_context):

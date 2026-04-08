@@ -16,6 +16,18 @@ class ImageAnalyzer:
 
     def __init__(self):
         self.llm = DualLLM()
+        self.ocr_reader = None
+
+    def _get_ocr_reader(self):
+        if self.ocr_reader is None:
+            try:
+                import easyocr
+                logger.info("Initializing EasyOCR reader...")
+                self.ocr_reader = easyocr.Reader(['en'], gpu=True)
+            except ImportError:
+                logger.warning("easyocr not installed, OCR will be skipped")
+                self.ocr_reader = "disabled"
+        return self.ocr_reader if self.ocr_reader != "disabled" else None
 
     async def analyze(self, image_path: str, query: str = "") -> str:
         """
@@ -39,6 +51,18 @@ class ImageAnalyzer:
             
             image_b64 = base64.b64encode(image_bytes).decode("utf-8")
             
+            # --- Extract text using OCR ---
+            ocr_text = ""
+            reader = self._get_ocr_reader()
+            if reader:
+                try:
+                    ocr_results = reader.readtext(image_bytes, detail=0)
+                    if ocr_results:
+                        ocr_text = " ".join(ocr_results)
+                        logger.info(f"ImageAnalyzer: Extracted {len(ocr_text)} characters via OCR.")
+                except Exception as e:
+                    logger.warning(f"ImageAnalyzer: OCR failed: {e}")
+            
             # Determine file type
             ext = os.path.splitext(image_path)[1].lower()
             mime_map = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
@@ -49,7 +73,7 @@ class ImageAnalyzer:
                 try:
                     from langchain_core.messages import HumanMessage
                     
-                    prompt_text = self._build_prompt(query)
+                    prompt_text = self._build_prompt(query, ocr_text)
                     message = HumanMessage(
                         content=[
                             {"type": "text", "text": prompt_text},
@@ -79,7 +103,7 @@ class ImageAnalyzer:
                             f"{ollama_host}/api/generate",
                             json={
                                 "model": model,
-                                "prompt": self._build_prompt(query),
+                                "prompt": self._build_prompt(query, ocr_text),
                                 "images": [image_b64],
                                 "stream": False,
                             }
@@ -99,13 +123,16 @@ class ImageAnalyzer:
 
             # Final fallback: just describe that an image was uploaded
             logger.warning("ImageAnalyzer: No vision model available or all failed. Returning basic description.")
-            return f"[Vision Analysis Failed] All local models (LLaVA/Moondream) failed to analyze this image. User query: '{query}'. Please check Ollama logs for details."
+            fallback_msg = f"[Vision Analysis Failed] All local models (LLaVA/Moondream) failed to analyze this image. User query: '{query}'."
+            if ocr_text:
+                fallback_msg += f"\n\nHowever, OCR extracted the following text:\n{ocr_text}"
+            return fallback_msg
 
         except Exception as e:
             logger.error(f"ImageAnalyzer failed: {e}")
             return f"[Image analysis failed: {str(e)}]"
 
-    def _build_prompt(self, query: str = "") -> str:
+    def _build_prompt(self, query: str = "", ocr_text: str = "") -> str:
         """Build a focused analysis prompt for the vision model."""
         base_instruction = (
             "Analyze the image and provide a comprehensive description. "
@@ -114,6 +141,9 @@ class ImageAnalyzer:
             "Ensure numerical values are preserved without alteration."
         )
         
+        if ocr_text:
+            base_instruction += f"\n\n[Extracted Text via OCR]:\n{ocr_text}\n"
+
         if query:
             return f"{base_instruction}\n\nUser Question: {query}\n\nAnswer the user's question precisely using the visual information provided."
         

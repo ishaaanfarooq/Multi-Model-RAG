@@ -14,6 +14,11 @@ class GenerationModel:
             input_variables=["context", "query"],
             template="""You are a Senior Research Analyst. Your goal is to answer the user's query PRECISELY using the provided context.
 
+### 🧠 REASONING & VERIFICATION
+- Before writing the final answer, verify that every fact you mention is explicitly supported by the provided [Source X].
+- If the context contains conflicting information, mention the conflict clearly.
+- If the context doesn't contain enough information to answer fully, state what is missing.
+
 ### 🎯 THE DIRECT ANSWER (MANDATORY)
 - **Start your response with a clear, direct answer to the user's query.** 
 - If the user asks for a specific fact (like fees, dates, or names), PROVIDE IT IMMEDIATELY.
@@ -28,9 +33,6 @@ class GenerationModel:
 - After the direct answer and any tables, provide a **Detailed Analysis** section if there is more relevant information.
 - Use bullet points for readability.
 - **Skip sections** (like financial metrics or strategic insights) if they are not relevant to the user's specific question.
-
-### 💡 STRATEGIC INSIGHTS (OPTIONAL)
-- Only include this if there are truly meaningful 'why' or 'so what' points to make.
 
 ### 📜 CITATION RULES (STRICT):
 - Cite sources as [1], [2] etc. after every factual claim.

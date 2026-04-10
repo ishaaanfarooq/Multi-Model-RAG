@@ -3,28 +3,40 @@
 @tailwind utilities;
 
 :root {
-  /* Core Palette: Professional Wheat & Amber */
-  --color-background: #FAF9F6; /* Warm White/Wheat */
-  --color-foreground: #18181B; /* Zinc 950 */
-  --color-surface: #FFFFFF; /* High-quality Card Surface */
+  /* Core Palette: Professional Wheat & Amber (Light) */
+  --color-background: #FAF9F6;
+  --color-foreground: #18181B;
+  --color-surface: #FFFFFF;
   --color-surface-hover: #F8F7F3;
   --color-border: #E4E4E5;
   --color-border-bright: #D4D4D8;
   
-  --color-accent: #B45309; /* Warm Amber 700 */
-  --color-accent-secondary: #D97706; /* Amber 600 */
+  --color-accent: #B45309;
+  --color-accent-secondary: #D97706;
   --color-accent-gradient-from: #B45309;
   --color-accent-gradient-to: #D97706;
   
-  --color-muted: #71717A; /* Zinc 500 */
-  --color-success: #15803D; /* Green 700 */
+  --color-muted: #71717A;
+  --color-success: #15803D;
   --color-warning: #B45309;
   --color-error: #DC2626;
   
-  /* Layout Constants */
   --radius-lg: 24px;
   --radius-md: 16px;
   --radius-sm: 12px;
+}
+
+[data-theme='dark'] {
+  --color-background: #09090B; /* Zinc 950 */
+  --color-foreground: #FAFAFA;
+  --color-surface: #18181B; /* Zinc 900 */
+  --color-surface-hover: #27272A;
+  --color-border: #27272A;
+  --color-border-bright: #3F3F46;
+  
+  --color-accent: #F59E0B; /* Amber 500 */
+  --color-accent-secondary: #FBBF24;
+  --color-muted: #A1A1AA;
 }
 
 /* === Base Styles === */

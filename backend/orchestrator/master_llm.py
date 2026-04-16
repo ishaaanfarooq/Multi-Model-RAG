@@ -6,6 +6,7 @@ from retrieval.vector_db import VectorDatabase
 from retrieval.reranker import RerankerModel
 from models.generation import GenerationModel
 from verification.verifier import VerificationModule
+from retrieval.visualizer import VisualizerAgent
 
 class MasterOrchestrator:
     """
@@ -18,6 +19,7 @@ class MasterOrchestrator:
         self.reranker = RerankerModel()
         self.generator = GenerationModel()
         self.verifier = VerificationModule()
+        self.visualizer = VisualizerAgent()
         
     async def process_query_stream(self, query: str, history: str = "") -> AsyncGenerator[str, None]:
         """
@@ -127,5 +129,22 @@ class MasterOrchestrator:
            yield emit("Verification Module", "Completed", "Response failed strict verification check, but returning drafted answer with warning (FAIL)")
            answer = "[WARNING: May contain hallucinations] " + answer
 
+        # 6.5 Visualization (PaperBanana-style)
+        chart_filename = None
+        if tool != "Direct_Chat":
+            yield emit("Visualizer Agent", "Processing", "Scanning for numerical data to generate a visual chart...")
+            try:
+                chart_filename = await self.visualizer.run(ranked_docs, answer)
+                if chart_filename:
+                    yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
+                else:
+                    yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
+            except Exception as e:
+                yield emit("Visualizer Agent", "Error", f"Visualization failed: {str(e)}")
+
         # 7. Final Response
-        yield emit("Final Response", "Completed", "Pipeline finished", {"answer": answer, "sources": list(set(sources))})
+        final_details = {"answer": answer, "sources": list(set(sources))}
+        if chart_filename:
+            final_details["chart"] = f"/uploads/{chart_filename}"
+            
+        yield emit("Final Response", "Completed", "Pipeline finished", final_details)

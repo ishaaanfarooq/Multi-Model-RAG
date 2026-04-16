@@ -9,6 +9,7 @@ type Message = {
   role: "user" | "assistant" | "system";
   content: string;
   sources?: string[];
+  chart?: string;
   timestamp: Date;
   pipeline?: PipelineStage[];
 };
@@ -17,7 +18,25 @@ type PipelineStage = {
   model: string;
   status: string;
   action: string;
+  details?: any;
 };
+
+// Moving StageDisplay outside the component to prevent re-creation on every render
+const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
+  <div className="flex flex-col gap-2 p-4 bg-[#FAF9F6] border border-[#F1F1EF] rounded-3xl mt-4 max-w-[500px]">
+    <p className="text-[10px] font-bold text-[#B45309] uppercase tracking-[0.1em] mb-2 opacity-80">Pipeline Execution Path</p>
+    {stages.map((stage, i) => (
+      <div key={i} className="flex items-center gap-3 text-[11px] font-medium text-[#71717A]">
+        <span className={`w-1.5 h-1.5 rounded-full ${
+          stage.status === 'Processing' ? 'bg-[#FF9100] animate-pulse' : 
+          stage.status === 'Completed' ? 'bg-[#16A34A]' : 'bg-[#E4E4E5]'
+        }`} />
+        <span className="text-[#18181B] font-bold min-w-[140px] text-xs">{stage.model}</span>
+        <span className="truncate opacity-70 italic">{stage.action}</span>
+      </div>
+    ))}
+  </div>
+);
 
 export default function QueryPanel() {
   const [messages, setMessages] = useState<Message[]>([
@@ -34,6 +53,13 @@ export default function QueryPanel() {
   const [liveStages, setLiveStages] = useState<PipelineStage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Use a ref for liveStages to capture them in the SSE callback without re-creating handleSend
+  const stagesRef = useRef<PipelineStage[]>([]);
+
+  useEffect(() => {
+    stagesRef.current = liveStages;
+  }, [liveStages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,6 +77,7 @@ export default function QueryPanel() {
       content: query,
       timestamp: new Date(),
     };
+    
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setIsProcessing(true);
@@ -80,9 +107,12 @@ export default function QueryPanel() {
             role: "assistant",
             content: data.details?.answer || "Analytical synthesis produced no tangible result.",
             sources: data.details?.sources || [],
+            chart: data.details?.chart || undefined,
             timestamp: new Date(),
-            pipeline: [...liveStages, data],
+            // Use the ref to get the most up-to-date stages
+            pipeline: [...stagesRef.current, data],
           };
+          
           setMessages((prev) => [...prev, aiMsg]);
           setIsProcessing(false);
           setLiveStages([]);
@@ -105,23 +135,7 @@ export default function QueryPanel() {
       setLiveStages([]);
       eventSource.close();
     };
-  }, [input, isProcessing, liveStages]);
-
-  const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
-    <div className="flex flex-col gap-2 p-4 bg-[#FAF9F6] border border-[#F1F1EF] rounded-3xl mt-4 max-w-[500px]">
-      <p className="text-[10px] font-bold text-[#B45309] uppercase tracking-[0.1em] mb-2 opacity-80">Pipeline Execution Path</p>
-      {stages.map((stage, i) => (
-        <div key={i} className="flex items-center gap-3 text-[11px] font-medium text-[#71717A]">
-          <span className={`w-1.5 h-1.5 rounded-full ${
-            stage.status === 'Processing' ? 'bg-[#FF9100] animate-pulse' : 
-            stage.status === 'Completed' ? 'bg-[#16A34A]' : 'bg-[#E4E4E5]'
-          }`} />
-          <span className="text-[#18181B] font-bold min-w-[140px]">{stage.model}</span>
-          <span className="truncate opacity-70 italic">{stage.action}</span>
-        </div>
-      ))}
-    </div>
-  );
+  }, [input, isProcessing]); // Removed liveStages from dependencies
 
   return (
     <div className="flex flex-col h-full bg-white relative">
@@ -159,30 +173,55 @@ export default function QueryPanel() {
                 "bubble-ai"
               }`}
             >
-              {msg.role === "assistant" && msg.pipeline && (
-                <StageDisplay stages={msg.pipeline} />
-              )}
-              <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-[#27272A]" : ""}`}>
-                {msg.content}
-              </div>
-              
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-6 pt-4 border-t border-[#F1F1EF]">
-                  <p className="text-[10px] uppercase font-bold text-[#B45309] tracking-widest mb-3">
-                    Verification Ingress Sources
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {msg.sources.map((src, i) => (
-                      <span key={i} className="px-2 py-1 bg-[#FAF9F6] border border-[#F1F1EF] text-[#71717A] rounded-lg text-[10px] font-bold">
-                        {src}
-                      </span>
-                    ))}
-                  </div>
+              <div className="relative">
+                {msg.role === "assistant" && msg.pipeline && (
+                  <StageDisplay stages={msg.pipeline} />
+                )}
+                
+                <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-[#27272A]" : ""}`}>
+                  {msg.content}
                 </div>
-              )}
+
+                {msg.chart && (
+                  <div className="mt-6 p-4 bg-[#FAF9F6] border border-[#F1F1EF] rounded-2xl overflow-hidden group/chart">
+                    <p className="text-[10px] uppercase font-bold text-[#B45309] tracking-widest mb-3 opacity-60">Generated Analytical Visualization</p>
+                    <img 
+                      src={msg.chart.startsWith('http') ? msg.chart : `${API_BASE}${msg.chart}`} 
+                      alt="Analytical Chart"
+                      className="w-full h-auto rounded-xl shadow-sm border border-amber-100 group-hover/chart:scale-[1.01] transition-transform duration-500"
+                    />
+                    <div className="mt-3 flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-[#71717A] uppercase tracking-tighter italic">PaperBanana-style Synthetic Rendering</span>
+                      <a 
+                        href={msg.chart.startsWith('http') ? msg.chart : `${API_BASE}${msg.chart}`} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-[10px] font-bold text-[#B45309] hover:underline"
+                      >
+                        View High Resolution →
+                      </a>
+                    </div>
+                  </div>
+                )}
+                
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="mt-6 pt-4 border-t border-[#F1F1EF]">
+                    <p className="text-[10px] uppercase font-bold text-[#B45309] tracking-widest mb-3">
+                      Verification Ingress Sources
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {msg.sources.map((src, i) => (
+                        <span key={i} className="px-2 py-1 bg-[#FAF9F6] border border-[#F1F1EF] text-[#71717A] rounded-lg text-[10px] font-bold">
+                          {src}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <span className="text-[10px] text-[#A1A1AA] font-bold mt-2 px-2 uppercase tracking-tighter opacity-50">
-              {msg.role} • {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {msg.role} • {msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
             </span>
           </div>
         ))}

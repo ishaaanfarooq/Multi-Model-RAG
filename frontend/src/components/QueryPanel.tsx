@@ -39,18 +39,24 @@ const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
 );
 
 export default function QueryPanel() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "welcome",
-      role: "system",
-      content:
-        "Welcome to your Professional AI Workspace. Please upload your knowledge base documents or crawl your target websites to begin. What can I help you analyze today?",
-      timestamp: new Date(),
-    },
-  ]);
+  const [hasMounted, setHasMounted] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveStages, setLiveStages] = useState<PipelineStage[]>([]);
+  
+  useEffect(() => {
+    setHasMounted(true);
+    setMessages([
+      {
+        id: "welcome",
+        role: "system",
+        content:
+          "Welcome to your Professional AI Workspace. Please upload your knowledge base documents or crawl your target websites to begin. What can I help you analyze today?",
+        timestamp: new Date(),
+      },
+    ]);
+  }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -138,7 +144,7 @@ export default function QueryPanel() {
   }, [input, isProcessing]); // Removed liveStages from dependencies
 
   return (
-    <div className="flex flex-col h-full bg-white relative">
+    <div className="flex flex-col h-full bg-white relative min-h-0">
       {/* Structural Header */}
       <div className="px-10 py-8 border-b border-[#F1F1EF] bg-white z-10 flex items-center justify-between">
         <div>
@@ -221,7 +227,7 @@ export default function QueryPanel() {
               </div>
             </div>
             <span className="text-[10px] text-[#A1A1AA] font-bold mt-2 px-2 uppercase tracking-tighter opacity-50">
-              {msg.role} • {msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
+              {msg.role} • {hasMounted && msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
             </span>
           </div>
         ))}

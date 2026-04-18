@@ -81,7 +81,7 @@ export default function CrawlPanel() {
   }, [url, isCrawling]);
 
   return (
-    <div className="flex flex-col h-full bg-[#FAF9F6]">
+    <div className="flex flex-col h-full bg-[#FAF9F6] min-h-0">
       {/* Structural Header */}
       <div className="px-10 py-10 bg-white border-b border-[#F1F1EF] z-10">
         <h2 className="text-2xl font-bold tracking-tight text-[#18181B] font-heading">

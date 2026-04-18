@@ -39,9 +39,9 @@ export default function UnifiedPage() {
         <div className="absolute inset-0 pointer-events-none opacity-20 bg-[radial-gradient(#B45309_1px,transparent_1px)] [background-size:24px_24px]" />
         <div className="absolute inset-0 pointer-events-none opacity-30 shadow-[inset_0_0_100px_rgba(250,249,246,1)]" />
 
-        <div className="relative flex-1 flex flex-col p-8 z-10">
-          <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col structural-card overflow-hidden">
-            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        <div className="relative flex-1 flex flex-col min-h-0 p-8 z-10">
+          <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0 structural-card overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
               {renderActiveView()}
             </div>
           </div>

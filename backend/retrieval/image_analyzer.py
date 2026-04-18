@@ -1,6 +1,7 @@
 import os
 import base64
 import logging
+import httpx
 from core.llm_provider import DualLLM
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,10 @@ class ImageAnalyzer:
         Returns:
             A detailed text description of the image contents.
         """
+        if not os.path.exists(image_path):
+            logger.error(f"ImageAnalyzer: File not found: {image_path}")
+            return f"[Error: Image file not found at {image_path}]"
+
         try:
             # Read and encode the image
             with open(image_path, "rb") as f:
@@ -64,36 +69,33 @@ class ImageAnalyzer:
                 "llava:7b-v1.5-q4_0"
             ]
             
-            last_error = None
-            import requests
             ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 
-            for model in models_to_try:
-                try:
-                    logger.info(f"ImageAnalyzer: Attempting analysis with model '{model}'...")
-                    response = requests.post(
-                        f"{ollama_host}/api/generate",
-                        json={
-                            "model": model,
-                            "prompt": self._build_prompt(query),
-                            "images": [image_b64],
-                            "stream": False,
-                        },
-                        timeout=120,
-                    )
-                    
-                    if response.status_code == 200:
-                        result = response.json().get("response", "").strip()
-                        if result:
-                            logger.info(f"ImageAnalyzer: Successfully analyzed image with '{model}'. Length: {len(result)}")
-                            return result
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                for model in models_to_try:
+                    try:
+                        logger.info(f"ImageAnalyzer: Attempting analysis with model '{model}'...")
+                        response = await client.post(
+                            f"{ollama_host}/api/generate",
+                            json={
+                                "model": model,
+                                "prompt": self._build_prompt(query),
+                                "images": [image_b64],
+                                "stream": False,
+                            }
+                        )
+                        
+                        if response.status_code == 200:
+                            result = response.json().get("response", "").strip()
+                            if result:
+                                logger.info(f"ImageAnalyzer: Successfully analyzed image with '{model}'. Length: {len(result)}")
+                                return result
+                            else:
+                                logger.warning(f"ImageAnalyzer: Model '{model}' returned an empty response. Trying next...")
                         else:
-                            logger.warning(f"ImageAnalyzer: Model '{model}' returned an empty response. Trying next...")
-                    else:
-                        logger.warning(f"ImageAnalyzer: Model '{model}' returned status {response.status_code}")
-                except Exception as e:
-                    logger.warning(f"ImageAnalyzer: Call to '{model}' failed: {e}")
-                    last_error = e
+                            logger.warning(f"ImageAnalyzer: Model '{model}' returned status {response.status_code}")
+                    except Exception as e:
+                        logger.warning(f"ImageAnalyzer: Call to '{model}' failed: {e}")
 
             # Final fallback: just describe that an image was uploaded
             logger.warning("ImageAnalyzer: No vision model available or all failed. Returning basic description.")
@@ -108,7 +110,8 @@ class ImageAnalyzer:
         base_instruction = (
             "Analyze the image and provide a comprehensive description. "
             "IMPORTANT: If you see any tables, charts, or structured data, extract them exactly "
-            "as they appear. Use Markdown formatting for tables. Extract all visible text accurately."
+            "as they appear. Use Markdown formatting for tables. Extract all visible text accurately. "
+            "Ensure numerical values are preserved without alteration."
         )
         
         if query:

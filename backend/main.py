@@ -7,7 +7,7 @@ from api.routes import router as api_router
 app = FastAPI(title="Multi-Model RAG System API")
 
 # Setup CORS - supports env var for production and localhost for dev
-allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:3001").split(",")
 
 app.add_middleware(
     CORSMiddleware,

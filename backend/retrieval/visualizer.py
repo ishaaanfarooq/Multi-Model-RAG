@@ -45,11 +45,12 @@ Context: {context}
 Answer: {answer}
 
 REQUIREMENTS:
-1. Use a professional style. Use a 'Wheat' background color (#f5deb3) and 'Amber' accents (#ffbf00) if possible to match the theme.
+1. Use a professional style. Set the background color strictly using `fig, ax = plt.subplots()` followed by `fig.patch.set_facecolor('#f5deb3')` and `ax.set_facecolor('#f5deb3')`. Use 'Amber' accents (#ffbf00) if possible.
 2. The script MUST save the plot to the path: '{output_path}'
 3. The script MUST be self-contained and not require any external files.
 4. Output ONLY the valid Python code. Do NOT include markdown blocks, explanations, or any other text.
 5. Use clear titles and labels.
+6. DO NOT use `plt.style.use()` as it may cause FileNotFoundError on some systems.
 
 Python Code:"""
         )
@@ -91,10 +92,20 @@ Python Code:"""
             return None
 
     def _clean_code(self, response: str) -> str:
-        # Remove markdown code blocks if present
-        code = re.sub(r'```python\s*', '', response)
-        code = re.sub(r'```\s*', '', code)
-        return code.strip()
+        # Try finding markdown code block first
+        code = ""
+        match = re.search(r'```(?:python)?(.*?)```', response, re.DOTALL)
+        if match:
+            code = match.group(1).strip()
+        else:    
+            # Fallback if no code blocks are found
+            code = re.sub(r'```python\s*', '', response)
+            code = re.sub(r'```\s*', '', code)
+            code = code.strip()
+            
+        # Remove plt.show() to prevent the script from hanging waiting for user input
+        code = re.sub(r'plt\.show\(\)', '', code)
+        return code
 
     def _execute_code(self, code: str) -> bool:
         """
@@ -106,8 +117,8 @@ Python Code:"""
                 f.write(code)
             
             # Execute the script
-            # We use the same python interpreter
-            result = subprocess.run(["python3", temp_script], capture_output=True, text=True, timeout=30)
+            import sys
+            result = subprocess.run([sys.executable, temp_script], capture_output=True, text=True, timeout=30)
             
             if result.returncode != 0:
                 logger.error(f"Execution Error: {result.stderr}")

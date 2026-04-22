@@ -7,12 +7,14 @@ A sophisticated, cloud-ready Retrieval-Augmented Generation (RAG) system designe
 ## 🌟 Key Features
 
 - **Autonomous Agentic Router**: Dynamically routes queries between Live Web Search (DuckDuckGo), Local Knowledge Base (FAISS), and Direct Conversational Chat.
-- **Master LLM Orchestrator**: Coordinates a 5-stage pipeline for every query:
+- **Data Visualizer Agent**: Automatically detects numerical/tabular data from the retrieved context and uses Pandas & Matplotlib to write and execute a custom Python script, returning a clean chart visualization inline with the text.
+- **Master LLM Orchestrator**: Coordinates a multi-agent pipeline for every query:
   1. **Query Rewriting**: Contextualizes conversational history for precise retrieval.
   2. **Retrieval**: FAISS-powered vector search across ingested documents.
   3. **Reranking**: Cross-encoding results to filter for the highest relevance.
   4. **Generation**: Synthesis of the final answer using Llama 3.2 via Ollama.
   5. **Verification**: Hallucination detection module that fact-checks the answer against source context.
+  6. **Visualization**: Invokes the Visualizer Agent to plot graphical charts if relevant data is found.
 - **Real-time Transparency**: Every status update is streamed to the frontend via Server-Sent Events (SSE), showing exactly which model is doing what.
 - **Multi-Source Ingestion**:
   - **PDF/Text Upload**: Ingest and index local documents.

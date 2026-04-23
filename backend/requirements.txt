@@ -13,7 +13,7 @@ python-dotenv==1.0.1
 pypdf==4.1.0
 beautifulsoup4==4.12.3
 requests==2.31.0
-duckduckgo-search==5.3.1
+duckduckgo-search==6.3.7
 matplotlib==3.8.3
 pandas==2.2.1
 seaborn==0.13.2

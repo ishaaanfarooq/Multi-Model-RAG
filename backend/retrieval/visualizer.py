@@ -23,8 +23,12 @@ class VisualizerAgent:
 
         self.detect_prompt = PromptTemplate(
             input_variables=["context", "answer"],
-            template="""Analyze the following context and the generated answer. 
-Determine if there is enough numerical or tabular data to create a high-quality visualization (bar chart, line graph, or pie chart).
+            template="""Analyze the following context and the generated answer. Your goal is to determine if we can create a meaningful data visualization (like a bar chart for company comparisons, a line chart for trends over years, or a pie chart for distribution).
+
+Look for:
+- Yearly comparisons (e.g., 2021, 2022, 2023)
+- Company/Entity comparisons (e.g., Apple vs Microsoft vs Google)
+- Any series of numbers associated with categories or dates.
 
 Context:
 {context}
@@ -32,7 +36,7 @@ Context:
 Answer:
 {answer}
 
-Respond with ONLY the word "YES" if a visualization would be highly beneficial and has sufficient data, otherwise respond with "NO".
+Respond with 'YES' if there are at least 2-3 data points that can be plotted. If the data is purely qualitative or contains only a single number, respond with 'NO'.
 Response:"""
         )
 

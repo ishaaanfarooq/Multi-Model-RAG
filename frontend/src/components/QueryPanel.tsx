@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 type Message = {
   id: string;
@@ -10,6 +10,7 @@ type Message = {
   content: string;
   sources?: string[];
   chart?: string;
+  warning?: string;
   timestamp: Date;
   pipeline?: PipelineStage[];
 };
@@ -89,6 +90,9 @@ export default function QueryPanel() {
     setIsProcessing(true);
     setLiveStages([]);
 
+    console.log("[QueryPanel] handleSend triggered for:", query);
+    console.log("[QueryPanel] Connecting to EventSource:", `${API_BASE}/api/stream?query=${encodeURIComponent(query)}`);
+
     const eventSource = new EventSource(
       `${API_BASE}/api/stream?query=${encodeURIComponent(query)}`
     );
@@ -114,6 +118,7 @@ export default function QueryPanel() {
             content: data.details?.answer || "Analytical synthesis produced no tangible result.",
             sources: data.details?.sources || [],
             chart: data.details?.chart || undefined,
+            warning: data.details?.warning || undefined,
             timestamp: new Date(),
             // Use the ref to get the most up-to-date stages
             pipeline: [...stagesRef.current, data],
@@ -157,9 +162,17 @@ export default function QueryPanel() {
         </div>
         <div className="flex items-center gap-4">
            {isProcessing && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
-                Processing
+              <div className="flex items-center gap-2 group relative">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
+                  Processing
+                </div>
+                <button 
+                  onClick={() => setIsProcessing(false)}
+                  className="hidden group-hover:block absolute right-0 top-full mt-2 px-2 py-1 bg-red-50 text-red-600 text-[9px] font-bold rounded border border-red-100 whitespace-nowrap shadow-sm z-50"
+                >
+                  Force Reset ❌
+                </button>
               </div>
            )}
         </div>
@@ -217,10 +230,22 @@ export default function QueryPanel() {
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {msg.sources.map((src, i) => (
-                        <span key={i} className="px-2 py-1 bg-[#FAF9F6] border border-[#F1F1EF] text-[#71717A] rounded-lg text-[10px] font-bold">
-                          {src}
-                        </span>
+                        <a key={i} href={src} target="_blank" rel="noreferrer"
+                          className="px-2 py-1 bg-[#FAF9F6] border border-[#F1F1EF] text-[#71717A] rounded-lg text-[10px] font-bold hover:border-amber-300 hover:text-amber-700 transition-colors truncate max-w-[260px]"
+                          title={src}>
+                          {src.replace(/^https?:\/\//, "").split("/")[0]}
+                        </a>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {msg.warning && (
+                  <div className="mt-4 flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl">
+                    <span className="text-lg mt-0.5">⚠️</span>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-amber-700 tracking-widest mb-1">Accuracy Notice</p>
+                      <p className="text-[12px] text-amber-800 leading-relaxed">{msg.warning}</p>
                     </div>
                   </div>
                 )}
@@ -270,10 +295,10 @@ export default function QueryPanel() {
             />
             <button
               type="submit"
-              disabled={!input.trim() || isProcessing}
+              disabled={!input.trim()}
               className="btn-premium rounded-[20px] py-3 shadow-md"
             >
-              {isProcessing ? "Processing" : "Analyze →"}
+              {isProcessing ? "Processing..." : "Analyze →"}
             </button>
           </form>
           <p className="text-[10px] font-bold text-[#71717A] text-center mt-4 uppercase tracking-[0.2em] opacity-40">

@@ -1,6 +1,6 @@
 import logging
 from langchain_community.llms import Ollama
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
 
@@ -20,9 +20,14 @@ class AgentRouter:
             input_variables=["query"],
             template='''You are an intelligent autonomous Agent Router. Your job is to classify the user's query into EXACTLY ONE of the following three Tool categories:
 
-1. "Search_Knowledge_Base": Choose this if the user is asking about highly specific private knowledge, companies, code, documents, or content from a specific website they might have ingested.
-2. "Web_Search": Choose this if the user is asking for LIVE, real-time information (e.g., current stock prices, news today, weather, recent events) that a static database would not know.
-3. "Direct_Chat": Choose this if the user is just saying hello, asking a basic conversational question ("How are you?"), or asking a generic programming/factual question that doesn't need external data.
+1. "Search_Knowledge_Base": Choose this ONLY if the user explicitly asks about uploaded/ingested private documents, a specific website they crawled, or content that clearly came from their personal knowledge base.
+2. "Web_Search": Choose this if the user is asking for ANY of the following:
+   - Live or real-time information (news, weather, stock prices)
+   - Facts about public companies, people, events, or places (e.g. revenue, market cap, product specs)
+   - Statistical data, rankings, or financial figures
+   - Anything a search engine would normally answer
+   - Questions about history, science, sports, politics, or general world knowledge
+3. "Direct_Chat": Choose this ONLY if the user is greeting you, making small talk ("How are you?", "Thanks"), or asking a generic conversational question that needs no external data.
 
 User Query: "{query}"
 

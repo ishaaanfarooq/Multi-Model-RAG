@@ -23,12 +23,12 @@ class VisualizerAgent:
 
         self.detect_prompt = PromptTemplate(
             input_variables=["context", "answer"],
-            template="""Analyze the following context and the generated answer. Your goal is to determine if we can create a meaningful data visualization (like a bar chart for company comparisons, a line chart for trends over years, or a pie chart for distribution).
+            template="""Analyze the following context and the generated answer. Your goal is to determine if a chart (bar, line, or pie) can be generated from the numbers found.
 
-Look for:
-- Yearly comparisons (e.g., 2021, 2022, 2023)
-- Company/Entity comparisons (e.g., Apple vs Microsoft vs Google)
-- Any series of numbers associated with categories or dates.
+TIGGER CONDITIONS (Say YES if ANY are met):
+- At least two different companies/entities are mentioned with a corresponding number (e.g. Sales, Revenue, Price).
+- At least two different years/dates are mentioned with a corresponding number.
+- Any list of at least 3 numbers assigned to categories.
 
 Context:
 {context}
@@ -36,25 +36,21 @@ Context:
 Answer:
 {answer}
 
-Respond with 'YES' if there are at least 2-3 data points that can be plotted. If the data is purely qualitative or contains only a single number, respond with 'NO'.
+Respond with ONLY the word "YES" if we can plot this data, otherwise ONLY the word "NO".
 Response:"""
         )
 
         self.code_prompt = PromptTemplate(
             input_variables=["context", "answer", "output_path"],
-            template="""You are an expert Data Visualizer. Your task is to write a Python script using Matplotlib and Pandas to visualize the numerical data found in the context/answer.
-
-DATA:
-Context: {context}
-Answer: {answer}
+            template="""You are a Lead Data Scientist. Write a Python script using Matplotlib to create a professional high-fidelity chart based on the data in the context/answer.
 
 REQUIREMENTS:
-1. Use a professional style. Set the background color strictly using `fig, ax = plt.subplots()` followed by `fig.patch.set_facecolor('#f5deb3')` and `ax.set_facecolor('#f5deb3')`. Use 'Amber' accents (#ffbf00) if possible.
-2. The script MUST save the plot to the path: '{output_path}'
-3. The script MUST be self-contained and not require any external files.
-4. Output ONLY the valid Python code. Do NOT include markdown blocks, explanations, or any other text.
-5. Use clear titles and labels.
-6. DO NOT use `plt.style.use()` as it may cause FileNotFoundError on some systems.
+1. DESIGN: Use a sleek, modern design. Background color MUST be '#FDFCFB' (soft wheat). Use a palette of Amber (#B45309), Zinc (#71717A), and Emerald (#059669).
+2. STRUCTURE: Use `fig, ax = plt.subplots(figsize=(10, 6))` for the plot.
+3. DATA: Extract all relevant numerical values for entities like Tesla, Nvidia, Meta, etc., and their associated years or metrics.
+4. SAVE: Save the final image to: '{output_path}'
+5. CLEANUP: Do NOT use `plt.show()`, `plt.style.use()`, or any interactive commands.
+6. OUTPUT: Return ONLY the raw python code. No markdown, no intro text.
 
 Python Code:"""
         )

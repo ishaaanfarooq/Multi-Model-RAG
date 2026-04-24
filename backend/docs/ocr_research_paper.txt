@@ -1,0 +1,156 @@
+Context-Driven Optical Character Recognition Error Detection and Automated Correction System.
+Akash Verma1 Department of CSE, Jyothy Institute of Technology, Bengaluru
+Anish Raj B2 Department of CSE, Jyothy Institute of Technology, Bengaluru
+Arpita S Patil3 Department of CSE, Jyothy Institute of Technology, Bengaluru
+Guided by the instructions of Krishna Prasad, Prof. Dr. Department of CSE, Jyothy Institute of Technology, Bengaluru
+
+Abstract
+Optical Character Recognition (OCR) is one of the important technologies in the digitization of government records. It allows translation of scanned documents into a machine readable text. However, OCR systems do not work with bad images, font variations, handwritings, and the multilingual problems, especially in huge government archives. Such mistakes may cause severe problems, such as legal conflicts, identity mismatch, and financial errors. This survey paper explains the available OCR technologies, error detection algorithms, and the automated correction algorithms with special focus on the context-based ones. It also discusses the concerns over security and integrity of the digitization of government documents and identifies gaps in the research over the integration of OCR and natural language processing (NLP). The paper concludes with some recommendations on how to develop a single framework of OCR correction that is context sensitive and secure.
+
+1. Introduction
+Digitizing the government documents is one of the facets of the new e-governance systems. Historical records such as land records, identity records, legal records and administrative records are being transformed to electronic formats to increase accessibility, storage space, and processing speed. OCR is at the centre of it as it removes text in scanned images and PDFs. Nevertheless, OCR systems continue to experience great errors. Poor resolution scans, noise, tilted pictures, complex layouts and multilingual messages are the reasons why mistakes are made. This is even more challenging in these countries as India where documents may include several languages and scripts where it is even harder to achieve the accuracy of OCR. Misplaced OCR in government documents can cause serious problems including identity check errors, inaccurate financial and legal disputes. Thus, the necessity in such systems that conduct OCR and automatically identify and fix mistakes based on contextual information is high. This survey is interested in the context-based error detection and correction methods in OCR and security challenges in handling sensitive government information.
+
+Page | 2
+
+2. Optical Character Recognition Technologies.
+2.1 Traditional OCR Methods
+Early OCR systems were based on template matching and rule-based systems. These systems compared the input characters to known templates and used pattern recognition to recognize text. They worked satisfactorily with plain fonts and regular fonts; and they failed on a noisy or convoluted document.
+
+2.2 Machine Learning-Based OCR
+Machine learning came with statistical models that improved the OCR accuracy. Techniques that were used to recognize characters included Support Vector Machines (SVM) and Hidden Markov Models (HMM). It is these that have helped to learn systems based on data instead of being restricted to rules.
+
+2.3 Learning-Based OCR
+After extracting the text of the scanned government documents with the help of OCR, one is left with the NLP that is used to find and rectify the errors depending on linguistic and contextual reasons. The significant techniques include tokenization, in which the text is broken up into words, dictionary-based verification, in which the invalid words are determined, and n-gram models, in which the sequence of words is examined, on whether it makes sense. Grammatical anomalies can be identified with Part-of-Speech (POS) tagging but important fields like names, location, and identification numbers common to government records can be identified with Named Entity Recognition (NER). Context-based correction considers the words in the immediate surrounding to replace the words that are incorrectly identified with the correct ones. These models are capable of dealing with complicated layouts, hand written scripts and multilingual scripts.
+
+2.4 Popular OCR Tools
+- Tesseract OCR: Tesseract OCR is an open-source OCR engine that is generally utilized in research and applications.
+- EasyOCR: A deep learning based OCR which can read across various languages.
+- Google Vision API: The Google Vision API is an OCR cloud service that is marked by a high level of accuracy and scalability.
+
+3. Types of errors and OCR challenges.
+3.1 Character-Level Errors
+- Substitution: Recognizing the wrong character (e.g. O as 0)
+- Insertion: Characters inserted.
+- Deletion: Missing characters
+
+3.2 Word-Level Errors
+- Word formation errors due to multiple character errors.
+- Splits or merging words.
+
+Page | 3
+
+3.3 Structural Errors
+- Incorrect layout detection
+- Table and form misalignment.
+
+3.4 Contextual Errors
+- Syntactically correct and semantically incorrect words in the sentence.
+
+3.5 Government Documents Problems.
+- Scans of poor quality and outdated records.
+- Handwritten notes
+- Multilingual information (e.g., English, Hindi, Multilingual content (e.g., English, Hindi, Kannada))
+- Complex document layouts
+- Signatures, seals and stamps.
+
+4. Techniques of OCR Error Detection.
+4.1 Dictionary-Based Methods
+The techniques utilize the OCR output and match it to a specified dictionary to find valid and invalid words. Despite being simple, they do not have context errors.
+
+4.2 Rule-Based Methods
+Anomalies are detected with the help of grammar rules and syntax patterns. Such methods are predetermined by rules and are inflexible.
+
+4.3 Statistical Methods
+Probability models (n-grams) approximate the likelihood of word sequences. These techniques are eAective at detecting, but require big data.
+
+4.4 Context-Based NLP Methods
+High-technologies entail the processing of natural languages to get the sense of words in the sentence.
+- Part-of-Speech tagging
+- Named Entity Recognition (NER)
+- Language modeling
+The approaches can identify semantically incorrect words that can go unnoticed by dictionary systems.
+
+4.5 Deep Learning-Based Detection
+Neural language models learn to identify anomalies in entire sentences, based on the learned patterns. These models are very accurate yet require a lot of computational power.
+
+Page | 4
+
+5. Automated Error Correction Techniques.
+5.1 Edit Distance-Based Correction
+The Levenshtein distance measures the similarity of words and corrects them. This is a simple approach that is not contextual.
+
+5.2 Probabilistic Models
+The Bayesian procedures estimate the probability of the correct word by taking the past probabilities and errors that have been observed.
+
+5.3 Machine Learning Approaches
+Supervised learning models learn on labeled data to make a prediction of corrections. These models enhance precision and they rely on the quality of training data.
+
+5.4 Deep Learning Approaches
+Neural networks (in particular, sequence-to-sequence models) are used to perform automatic text correction.
+- Recurrent Bidirectional Neural Networks (RBNNs)
+- Transformer models
+BERT and GPT models are the models that involve contextual embeddings to correct errors with respect to the meaning of a sentence.
+
+5.5 Hybrid Approaches
+Through the combination of the various methods: dictionary, statistical and deep learning, additional superior correction systems are created.
+
+6. Context-Driven Correction Framework
+A context sensitive OCR correction system is composed of a number of components:
+1. Process of input: Processing of the scanned images to improve quality.
+2. OCR Engine: Text recognition in images.
+3. Module of Error Detection: The detection of the wrong words with the help of NLP.
+4. Correction Module: Recommendation and implementation of corrections.
+5. Validation Module: Accuracy and consistency.
+6. Output Generation: Text that is fixed and checked is generated.
+The reasons why context-aware models are founded on semantic knowledge are to make corrections that make sense within the sentence.
+
+Page | 5
+
+7. Government Document Digitization Security and Integrity.
+7.1 Data Integrity
+Making sure that the digitized documents can be unaltered and proper with time.
+7.2 Authentication
+Checking that the identity of users that access or alter documents is verified.
+7.3 Digital Signatures.
+Used to verify the authenticity of documents and to prevent tampering.
+7.4 Encryption
+Securing of sensitive information in storage and transmission.
+7.5 Blockchain-Based Verification
+Gives the permanent records of the transactions of documents, which are transparent and secure.
+7.6 Threats
+- Document tampering
+- Unauthorized access
+- Data breaches
+- OCR attacks.
+
+8. Research Gaps
+- Low level of integration between OCR, NLP, and security into a single structure.
+- Non-availability of dataset of government-specific documents.
+- Low performance in multilingual environment.
+- Absence of context-sensitive correction systems.
+- Limited discussion of adversarial resistance in OCR.
+
+9. Future Research Directions
+- Exploring multilingual OCR of Indian languages.
+- Transformer-based context-aware correction.
+- Creating annotated data of governmental materials on a scale.
+- Implementation of safe OCR pipelines such as encryption and blockchain.
+- OCR correction of a live document.
+
+Page | 6
+
+10. Conclusion
+OCR is crucial in digitization of government documents, and its drawbacks pose great challenges. Error detection and correction systems, especially, by contextual understanding, should be in place, to ensure the accuracy and reliability. OCR and the use of high-quality NLP tools combined with a high level of security could have a significant impact on the quality of digitized documents. This survey will discuss the existing techniques, summarize the research gaps and provide a platform on which secure and intelligent OCR correction systems should be developed to be used by governments.
+
+References
+1. Context-driven automatic target detection with cross-modality real-synthetic image merging Z Geng, S Zhang, C Xu, H Zhou, W Li… - IEEE Journal of …, 2025 - ieeexplore.ieee.org
+2. Emerging Digitalization in Property/Facility Management: A State-of-the-Art Review and Future Directions Colin Yu Shing Chui 1, Tarek Zayed 1 , Jiduo Xing 2,3,* and Shihui Ma
+3. Context-Driven Automatic Target Detection With Cross-Modality Real-Synthetic Image Merging Zhe Geng, Member, IEEE, Shiyu Zhang Daiyin Zhu, Chongqi Xu, Haowen Zhou, Member, IEEE, and Gong Zhang, WeiLi, XiangYu, Member, IEEE
+4. A Survey of Automatic Text Summarization: Progress, Process and Challenges M. F. MRIDHA KAMRUDDIN NUR 1, (Senior Member, IEEE), aklima akter lima 1, 2, (senior member, ieee), sujoy chandra das mahmudhasan3, and muhammadmohsinkabir 1
+5. Multiple classifier decision combination strategies for character recognition: A review A. F. R. Rahman1, M. C. Fairhurst
+6. Optimizing government outsourcing: a performance management framework for enhancing public service delivery - Harsh Sharma
+7. A Survey on Model Context Protocol: Architecture, State-of-the-art, Challenges and Future Directions - Partha Pratim Ray, Senior Member, IEEE
+8. A Survey on Optical Character Recognition System - Noman Islam, Zeeshan Islam, Nazia Noor
+9. Optical character recognition system using artificial intelligence Sistema de reconciliation optic de characters Mediante intelligence artificial Muthusundari1, A Velpoorani2, S Venkata Kusuma2, Trisha L2, Om.k.Rohini
+10. OPTICAL CHARACTER RECOGNITION (OCR): A COMPREHENSIVE REVIEW Gowrishankar H, Praveen K S
+11. Revolutionizing Data Entry: An In-Depth Study of Optical Character Recognition Technology and Its Future Potential - Aaryan Raj 1, Sakshi Sharma 2, Janvee Singh 3, Aastha Singh

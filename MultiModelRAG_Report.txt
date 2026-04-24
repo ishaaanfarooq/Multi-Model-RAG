@@ -1,0 +1,156 @@
+Multi-Model Retrieval-Augmented Generation (RAG) System for Enhanced Contextual Synthesis and Factuality.
+Akash Verma1   Department of CSE, Jyothy Institute of Technology, Bengaluru
+Anish Raj B2   Department of CSE, Jyothy Institute of Technology, Bengaluru
+Arpita S Patil3   Department of CSE, Jyothy Institute of Technology, Bengaluru
+Guided by the instructions of Krishna Prasad, Prof. Dr. Department of CSE, Jyothy Institute of Technology, Bengaluru
+
+Abstract
+Retrieval-Augmented Generation (RAG) is one of the important technologies in the transformation of deep learning systems. It allows translation of static knowledge bases into dynamic analytical responses. However, LLM systems do not work with stale data, factual hallucinations, reasoning gaps, and the attribution problems, especially in huge enterprise archives. Such mistakes may cause severe problems, such as misinformation, trust erosion, and decision-making errors. This survey paper explains the available RAG technologies, retrieval algorithms, and the automated verification algorithms with special focus on the multi-agent ones. It also discusses the concerns over security and privacy of the ingestion of sensitive documents and identifies gaps in the research over the integration of RAG and agentic workflows (NLP). The paper concludes with some recommendations on how to develop a single framework of RAG synthesis that is context sensitive and secure.
+
+1. Introduction
+Architecting the multi-model RAG systems is one of the facets of the new AI-driven automation. Historical data stores such as technical docs, market records, legal records and scientific records are being transformed to vector formats to increase accessibility, retrieval accuracy, and processing speed. RAG is at the centre of it as it extracts text in relevant chunks and embeddings. Nevertheless, LLM systems continue to experience great errors. Poor retrieval quality, noise, hallucinated facts, complex semantic structures and domain-specific terms are the reasons why mistakes are made. This is even more challenging in these domains such as finance where documents may include several formats and tables where it is even harder to achieve the accuracy of RAG. Misplaced facts in generated answers can cause serious problems including business intelligence errors, inaccurate analysis and strategy disputes. Thus, the necessity in such systems that conduct RAG and automatically identify and fix mistakes based on contextual information is high. This survey is interested in the agent-based error detection and correction methods in RAG and security challenges in handling sensitive enterprise information.
+
+Page | 2
+
+2. Retrieval-Augmented Generation Technologies.
+2.1 Traditional RAG Methods
+Early RAG systems were based on simple keyword search and basic similarity systems. These systems compared the user queries to document headers and used lexical matching to recognize text. They worked satisfactorily with narrow topics and small datasets; and they failed on a noisy or convoluted document.
+
+2.2 Machine Learning-Based RAG
+Machine learning came with semantic models that improved the RAG accuracy. Techniques that were used to encode data included Dense Passage Retrieval (DPR) and Bi-Encoder architectures (BERT). It is these that have helped to build systems based on meanings instead of being restricted to keywords.
+
+2.3 Agentic-Based RAG
+After retrieving the context of the ingested enterprise documents with the help of RAG, one is left with the LLM that is used to synthesize and rectify the responses depending on linguistic and contextual reasons. The significant techniques include vectorization, in which the text is broken up into embeddings, similarity-based verification, in which the relevant chunks are determined, and rerank models, in which the sequence of chunks is examined, on whether it makes sense. Factual anomalies can be identified with Self-Correction (Re-check) but important fields like names, figures, and technical identifiers common to enterprise records can be identified with Named Entity Recognition (NER). Context-based correction considers the source in the immediate surrounding to replace the facts that are incorrectly generated with the correct ones. These models are capable of dealing with complicated layouts, tabular structures and domain-specific knowledge.
+
+2.4 Popular RAG Tools
+- LangChain: LangChain is an open-source automation engine that is generally utilized in research and applications.
+- LlamaIndex: A deep learning based index which can read across various formats.
+- OpenAI API: The OpenAI API is an LLM cloud service that is marked by a high level of accuracy and scalability.
+
+3. Types of errors and RAG challenges.
+3.1 Retrieval-Level Errors
+- Irrelevance: Retrieving the wrong document (e.g. Finance as Legal)
+- Overlap: Redundant chunks inserted.
+- Omission: Missing critical context
+
+3.2 Generation-Level Errors
+- Hallucination: Creating facts due to LLM training gaps.
+- Drift: Losing query focus.
+
+Page | 3
+
+3.3 Structural Errors
+- Incorrect chunking logic
+- Table and metadata misalignment.
+
+3.4 Contextual Errors
+- Syntactically correct and semantically grounded but stale facts.
+
+3.5 Enterprise Data Problems.
+- Documents of poor structure and outdated data.
+- Unstructured notes
+- Multi-format information (e.g., PDF, HTML, Markdown content (e.g., Docs, CSV, JSON))
+- Complex semantic relational layouts
+- Tables, charts and diagrams.
+
+4. Techniques of RAG Error Detection.
+4.1 Semantic-Based Methods
+The techniques utilize the RAG output and match it to a ground-truth source to find valid and invalid claims. Despite being simple, they do not have context depth.
+
+4.2 Critique-Based Methods
+Anomalies are detected with the help of LLM-critique prompts and verification patterns. Such methods are predetermined by models and are probabilistic.
+
+4.3 Statistical Methods
+Similarity scores (cosine) approximate the likelihood of chunk relevance. These techniques are eAective at filtering, but require fine-tuned models.
+
+4.4 Context-Based Agent Methods
+High-technologies entail the processing of agentic loops to get the sense of facts in the synthesis.
+- Fact-Checking Agent
+- Multi-Source Verification (RAG)
+- Chain-of-Thought (CoT)
+The approaches can identify semantically incorrect claims that can go unnoticed by simple systems.
+
+4.5 Deep Learning-Based Detection
+Cross-encoder models learn to identify anomalies in entire rankings, based on the learned patterns. These models are very accurate yet require a lot of computational power.
+
+Page | 4
+
+5. Automated Fact Correction Techniques.
+5.1 Iteration-Based Correction
+The multi-turn dialogue measures the consistency of answers and corrects them. This is a simple approach that is not deep-acting.
+
+5.2 Probabilistic Models
+The grounding procedures estimate the probability of the correct fact by taking the source chunks and errors that have been observed.
+
+5.3 Machine Learning Approaches
+Supervised rerank models learn on labeled data to make a prediction of rankings. These models enhance precision and they rely on the quality of training data.
+
+5.4 Deep Learning Approaches
+Neural networks (in particular, transformer-based models) are used to perform automatic text synthesis.
+- Bidirectional Encoder Representations (BERT)
+- Generative Models (GPT)
+Llama and Claude models are the models that involve contextual embeddings to synthesize answers with respect to the intent of a query.
+
+5.5 Hybrid Approaches
+Through the combination of the various methods: vector, rerank and generative AI, additional superior RAG systems are created.
+
+6. Agent-Driven Orchestration Framework
+An autonomous agent sensitive RAG workflow is composed of a number of components:
+1. Process of Ingestion: Processing of the source data to improve embeddings.
+2. Vector Engine: Semantic storage in vector space.
+3. Module of Retrieval: The detection of the relevant chunks with the help of RAG.
+4. Generation Module: Recommendation and implementation of answers.
+5. Verification Module: Factuality and consistency.
+6. Output Generation: Synthesis that is fixed and checked is generated.
+The reasons why agent-aware models are founded on iterative loops are to make responses that make sense within the context.
+
+Page | 5
+
+7. RAG System Data Privacy and Integrity.
+7.1 Data Integrity
+Making sure that the ingested documents can be unaltered and proper with time.
+7.2 Authentication
+Checking that the identity of users that access or query documents is verified.
+7.3 Metadata Signatures.
+Used to verify the authenticity of sources and to prevent tampering.
+7.4 Encryption
+Securing of sensitive information in embedding space and transmission.
+7.5 Blockchain-Based Proof
+Gives the permanent records of the transactions of queries, which are transparent and secure.
+7.6 Threats
+- Prompt injection
+- Unauthorized access
+- Data leakage
+- Retrieval attacks.
+
+8. Research Gaps
+- Low level of integration between RAG, Agents, and security into a single structure.
+- Non-availability of dataset of domain-specific RAG benchmarks.
+- Low performance in multi-modal environment.
+- Absence of context-sensitive verification systems.
+- Limited discussion of adversarial resistance in RAG.
+
+9. Future Research Directions
+- Exploring multi-modal RAG for images and charts.
+- Transformer-based agent-aware correction.
+- Creating annotated data of benchmark materials on a scale.
+- Implementation of safe RAG pipelines such as encryption and isolation.
+- Fact correction of a live stream.
+
+Page | 6
+
+10. Conclusion
+RAG is crucial in digitization of enterprise data, and its limitations pose great challenges. Error detection and correction systems, especially, by agentic understanding, should be in place, to ensure the accuracy and reliability. RAG and the use of high-quality agent tools combined with a high level of security could have a significant impact on the quality of AI responses. This survey will discuss the existing techniques, summarize the research gaps and provide a platform on which secure and intelligent RAG systems should be developed to be used by enterprises. The study further facilitates the rapid global deployment.
+
+References
+1. Context-driven retrieval-augmented generation with cross-agent real-synthetic data merging Z Geng, S Zhang, C Xu, H Zhou, W Li… - Advanced Agentic Coding, 2026 - deepmind.goog
+2. Emerging Digitalization in RAG Systems: A State-of-the-Art Review and Future Directions Colin Yu Shing Chui 1, Tarek Zayed 1 , Jiduo Xing 2,3,* and Shihui Ma
+3. Agent-Driven Automatic Fact Detection With Multi-Model Real-Synthetic Answer Merging Zhe Geng, Member, IEEE, Shiyu Zhang Daiyin Zhu, Chongqi Xu, Haowen Zhou, Member, IEEE, and Gong Zhang, WeiLi, XiangYu, Member, IEEE
+4. A Survey of Automatic RAG Summarization: Progress, Process and Challenges M. F. MRIDHA KAMRUDDIN NUR 1, (Senior Member, IEEE), aklima akter lima 1, 2, (senior member, ieee), sujoy chandra das mahmudhasan3, and muhammadmohsinkabir 1
+5. Multiple retriever decision combination strategies for RAG systems: A review A. F. R. Rahman1, M. C. Fairhurst
+6. Optimizing AI orchestration: a performance management framework for enhancing RAG delivery - Antigravity AI
+7. A Survey on Model Context Protocol: Architecture, State-of-the-art, Challenges and Future Directions - Partha Pratim Ray, Senior Member, IEEE
+8. A Survey on Retrieval-Augmented Generation System - Noman Islam, Zeeshan Islam, Nazia Noor
+9. Multi-model retrieval system using artificial intelligence Sistema de reconciliation optic de characters Mediante intelligence artificial Muthusundari1, A Velpoorani2, S Venkata Kusuma2, Trisha L2, Om.k.Rohini
+10. RETRIEVAL AUGMENTED GENERATION (RAG): A COMPREHENSIVE REVIEW Gowrishankar H, Praveen K S
+11. Revolutionizing Data Analysis: An In-Depth Study of Multi-Model RAG Technology and Its Future Potential - Aaryan Raj 1, Sakshi Sharma 2, Janvee Singh 3, Aastha Singh

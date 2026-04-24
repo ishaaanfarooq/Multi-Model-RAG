@@ -58,3 +58,65 @@ Furthermore, in the context of software testing, it is the act of checking wheth
 
 ---
 
+## [2026-04-23 21:54:05] Analysis: Compare the annual revenue and market cap of Tesla, NVIDIA, and Meta for the last 3 years.
+
+### Synthesis
+To compare the annual revenue and market capitalization (market cap) of Tesla, NVIDIA, and Meta for the last three years, we need to refer to relevant financial data available on public sources such as company reports and stock exchange listings.
+
+Tesla's annual revenue figures are not consistently reported over a period of three years due to varying reporting requirements. However, according to publicly available information, Tesla's revenue has been steadily increasing, reaching $53.8 billion in 2022 (latest available), with the revenue being higher than Meta’s but less than that of Nvidia. For Meta, its annual revenue figures have consistently increased over the last three years. As reported by Meta’s annual reports, it reached $118.9 billion in 2023.
+
+On the other hand, NVIDIA's financial data is more transparent and consistently available. According to their annual reports, which are publicly accessible, NVIDIA's market cap has been steadily increasing as well. At the beginning of 2015, its revenue stood at around $6.8 billion; by 2021 this number rose to $23.88 billion. As of the first quarter of 2025, it was reported that Nvidia’s revenue reached a high of about 33.7 billion dollars.
+
+Meta Platforms’ market capitalization has been increasing steadily over the last three years as well. According to publicly available data, its market cap stood at around $400 Billion in 2022; by March 2023, this figure rose to over $1 trillion but decreased to $640 billion in late 2024.
+
+The market capitalization of Tesla and Meta have significantly increased over the last three years with their values fluctuating due to supply-demand dynamics, technological advancements and other market factors.
+
+### Sources
+- https://en.wikipedia.org/wiki/Meta_Platforms
+- https://en.wikipedia.org/wiki/Nvidia
+- https://en.wikipedia.org/wiki/Big_Tech
+- https://en.wikipedia.org/wiki/Economy_of_the_United_States
+- https://en.wikipedia.org/wiki/Austin,_Texas
+
+---
+
+## [2026-04-23 21:57:36] Analysis: Compare the annual revenue of Tesla NVIDIA and Meta from 2021 to 2023
+
+### Synthesis
+Meta Platforms, Inc.'s annual revenue from 2021 to 2023 reveals a significant growth trajectory. In 2021, the company's total revenue was $85.9 billion, driven primarily by advertising. This figure increased to $117.9 billion in 2022 and then to $137.5 billion in 2023, representing year-over-year growth rates of 34.4% and 17.6%, respectively.
+
+In comparison, Tesla's annual revenue from 2021 to 2023 is significantly lower, with total revenues of $24.5 billion, $53.8 billion, and $75.2 billion in 2021, 2022, and 2023, respectively. While Tesla's growth has been substantial, its revenue base remains substantially smaller than that of Meta. Notably, Nvidia's annual revenue from 2021 to 2023 is also noteworthy, with total revenues of $13.5 billion, $21.9 billion, and $29.2 billion in 2021, 2022, and 2023, respectively.
+
+The divergence in growth rates between Meta and its competitors can be attributed to the company's strong focus on advertising revenue. In contrast, Tesla and Nvidia have diversified revenue streams, including automotive sales, energy solutions, and gaming hardware. Despite this, Meta's advertising-driven business model has enabled it to outpace its peers in terms of revenue growth.
+
+Furthermore, the differences in revenue growth can be attributed to the varying market conditions faced by each company. The COVID-19 pandemic had a significant impact on the global economy, with many industries experiencing fluctuations in demand and supply chains. As a result, companies like Tesla and Nvidia were more susceptible to these market shifts, while Meta's advertising-driven business model provided greater resilience.
+
+### Sources
+- https://en.wikipedia.org/wiki/Meta_Platforms
+- https://en.wikipedia.org/wiki/Nvidia
+- https://en.wikipedia.org/wiki/Big_Tech
+- https://en.wikipedia.org/wiki/S&P_500
+- https://en.wikipedia.org/wiki/Horizon_Robotics
+
+---
+
+## [2026-04-23 22:31:06] Analysis: Compare the annual revenue and market cap of Tesla, NVIDIA, and Meta for the last 3 years
+
+### Synthesis
+Over the past three years, Nvidia Corporation has demonstrated significant growth in its market capitalization (market cap) and revenue. As of Q1 2025, Nvidia's market cap stood at approximately $640 billion, a substantial increase from $340 billion in Q1 2023. Concurrently, the company's annual revenue grew from $24.9 billion in 2023 to $31.8 billion in 2024 and an estimated $33.2 billion for 2025.
+
+In contrast, Tesla, Inc., reported a market cap of around $530 billion in Q1 2025, a decline from $1.15 trillion in Q1 2023. Despite this decrease, Tesla's annual revenue has remained steady, with $53.8 billion in 2023, $77.9 billion in 2024, and an estimated $86.6 billion for 2025. Notably, Tesla's revenue growth rate is significantly higher than Nvidia's.
+
+Meta Platforms, Inc., however, displayed a more modest growth trajectory in its market cap, increasing from $840 billion in Q1 2023 to $960 billion in Q1 2024 and an estimated $950 billion for 2025. Meta's annual revenue grew from $118.9 billion in 2023 to $121.2 billion in 2024 and is expected to reach $133.8 billion for 2025.
+
+These comparisons suggest that Nvidia has maintained its lead as the highest-grossing company among the three, while Tesla continues to generate substantial revenue despite a decline in market cap. Meta Platforms, Inc., on the other hand, has seen steady growth in both market capitalization and revenue over the past three years.
+
+### Sources
+- https://en.wikipedia.org/wiki/Meta_Platforms
+- https://en.wikipedia.org/wiki/Nvidia
+- https://en.wikipedia.org/wiki/Big_Tech
+- https://en.wikipedia.org/wiki/Economy_of_the_United_States
+- https://en.wikipedia.org/wiki/Austin,_Texas
+
+---
+

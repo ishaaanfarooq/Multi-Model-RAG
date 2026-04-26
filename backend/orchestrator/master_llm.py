@@ -66,7 +66,7 @@ class MasterOrchestrator:
             try:
                 answer = await self.generator.generate_answer(
                     search_query,
-                    ["You are a helpful AI assistant. Answer the user's conversational query directly."]
+                    mode="conversational"
                 )
                 yield emit("Direct Chat", "Completed", "Answer generated")
                 yield emit("Final Response", "Completed", "Done", {"answer": answer, "sources": []})
@@ -94,7 +94,7 @@ class MasterOrchestrator:
             # If web search succeeded, generate + verify + visualize then return
             if tool == "Web_Search":
                 yield emit("Generation", "Processing", "Synthesizing answer using live web data")
-                answer = await self.generator.generate_answer(search_query, doc_texts)
+                answer = await self.generator.generate_answer(search_query, doc_texts, mode="analytical")
                 yield emit("Generation", "Completed", "Answer drafted successfully")
 
                 # Verification
@@ -156,7 +156,7 @@ class MasterOrchestrator:
         yield emit("Reranking Model", "Completed", f"Filtered down to top {len(ranked_docs)} most relevant contexts")
 
         yield emit("Generation", "Processing", "Synthesizing answer using LLM and retrieved context")
-        answer = await self.generator.generate_answer(search_query, ranked_docs)
+        answer = await self.generator.generate_answer(search_query, ranked_docs, mode="analytical")
         yield emit("Generation", "Completed", "Answer drafted successfully")
 
         # Verification

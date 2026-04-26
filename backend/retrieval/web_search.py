@@ -73,7 +73,7 @@ def _search_wikipedia_rest(query: str, max_results: int = 4) -> list[dict]:
                         "action": "query",
                         "titles": title,
                         "prop": "extracts",
-                        "exsentences": 15,
+                        "exsentences": 20,
                         "explaintext": True,
                         "format": "json",
                     },
@@ -88,7 +88,7 @@ def _search_wikipedia_rest(query: str, max_results: int = 4) -> list[dict]:
                         results.append({
                             "title": title,
                             "href": url,
-                            "body": extract[:1500],
+                            "body": extract[:2500],
                         })
             except Exception as inner_e:
                 logger.debug(f"Wikipedia extract failed for {title}: {inner_e}")

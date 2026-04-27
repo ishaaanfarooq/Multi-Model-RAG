@@ -1,4 +1,4 @@
-from langchain_community.llms import Ollama
+from core.llm_provider import DualLLM
 from langchain_core.prompts import PromptTemplate
 
 class VerificationModule:
@@ -7,7 +7,7 @@ class VerificationModule:
     it aligns with the source documents and reduces hallucinations.
     """
     def __init__(self, model_name: str = "llama3.2"):
-        self.llm = Ollama(model=model_name)
+        self.llm = DualLLM(llama_model=model_name)
         self.prompt_template = PromptTemplate(
             input_variables=["context", "answer"],
             template="""You are a verification AI. Determine if the generated Answer is based on the provided Context.

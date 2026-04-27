@@ -1,13 +1,13 @@
-from langchain_community.llms import Ollama
+from core.llm_provider import DualLLM
 from langchain_core.prompts import PromptTemplate
 
 class GenerationModel:
     """
     Generates the final answer using retrieved context and the user query.
-    Utilizes Ollama for local LLM inference.
+    Prioritizes Gemini with a local Llama fallback.
     """
     def __init__(self, model_name: str = "llama3.2"):
-        self.llm = Ollama(model=model_name)
+        self.llm = DualLLM(llama_model=model_name)
         
         self.analytical_template = PromptTemplate(
             input_variables=["context", "query"],

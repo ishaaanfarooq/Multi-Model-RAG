@@ -17,3 +17,4 @@ duckduckgo-search==6.3.7
 matplotlib==3.8.3
 pandas==2.2.1
 seaborn==0.13.2
+langchain-google-genai==1.0.1

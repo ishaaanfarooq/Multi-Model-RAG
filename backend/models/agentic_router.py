@@ -1,5 +1,5 @@
 import logging
-from langchain_community.llms import Ollama
+from core.llm_provider import DualLLM
 from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
@@ -13,8 +13,8 @@ class AgentRouter:
     3. Direct_Chat: Casual conversation
     """
     def __init__(self, model_name: str = "llama3.2"):
-        # We can use Ollama directly for basic classification
-        self.llm = Ollama(model=model_name)
+        # Prioritize Gemini for accurate classification
+        self.llm = DualLLM(llama_model=model_name)
         
         self.prompt_template = PromptTemplate(
             input_variables=["query"],

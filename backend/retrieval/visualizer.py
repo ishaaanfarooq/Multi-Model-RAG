@@ -3,7 +3,7 @@ import re
 import uuid
 import subprocess
 import logging
-from langchain_community.llms import Ollama
+from core.llm_provider import DualLLM
 from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
@@ -12,9 +12,10 @@ class VisualizerAgent:
     """
     An agent that detects numerical data in RAG results and generates
     Matplotlib charts to visualize the information.
+    Prioritizes Gemini for sophisticated data extraction and code generation.
     """
     def __init__(self, model_name: str = "llama3.2", output_dir: str = "uploads"):
-        self.llm = Ollama(model=model_name)
+        self.llm = DualLLM(llama_model=model_name)
         self.output_dir = output_dir
         
         # Ensure output directory exists
@@ -24,10 +25,11 @@ class VisualizerAgent:
         self.detect_prompt = PromptTemplate(
             input_variables=["context", "answer"],
             template="""Analyze the following context and the generated answer. Your goal is to determine if a chart (bar, line, or pie) can be generated from the numbers found.
-
+            
 TIGGER CONDITIONS (Say YES if ANY are met):
-- At least two different companies/entities are mentioned with a corresponding number (e.g. Sales, Revenue, Price).
-- At least two different years/dates are mentioned with a corresponding number.
+- Academic or Departmental fees/costs are mentioned with specific amounts.
+- At least two different companies, entities, or departments are mentioned with a corresponding number (e.g. Sales, Revenue, Price, Fees).
+- At least two different years/dates/semesters are mentioned with a corresponding number.
 - Any list of at least 3 numbers assigned to categories.
 
 Context:

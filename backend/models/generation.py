@@ -11,20 +11,29 @@ class GenerationModel:
         
         self.analytical_template = PromptTemplate(
             input_variables=["context", "query"],
-            template="""You are a Senior Research Analyst. Your task is to synthesize the provided context into a high-level, data-driven analytical report.
+            template="""You are an Expert Financial Data Journalist. Your task is to transform raw context into a HIGHLY STRUCTURED, VISUAL Markdown report.
+            
+### MANDATORY OUTPUT FORMAT:
+1. **Summary**: One punchy sentence about the findings.
+2. **Horizontal Rule**: `---`
+3. **📊 Comparison Table**: If two or more things are being compared, YOU MUST CREATE A MARKDOWN TABLE. Include columns for 'Metric', 'Entity A', and 'Entity B'.
+4. **💰 Key Financials**: Use bullet points to list specific numbers, revenue, or dates found in the context.
+5. **💡 Strategic Insights**: Use bullet points with emojis (👉) to explain the 'why' behind the data.
+6. **Horizontal Rule**: `---`
 
-STRICT INSTRUCTIONS:
-1. GROUNDING: ONLY use information provided in the context. If specific numbers (like revenue for a specific year) are not in the context, state that the data is unavailable.
-2. FORMAT: Write exactly 3 professional paragraphs. Do NOT use lists or bullets.
-3. DATA INTEGRITY: Include all relevant financial figures, percentages, and dates found in the context.
-4. STYLE: Be authoritative. Do not mention "the context" or "the documents". Just state the analysis.
+### CRITICAL RULES:
+- DO NOT write long paragraphs.
+- DO NOT mention "the provided text" or "the documents".
+- ALWAYS use EMOJIS in headers.
+- BOLD all names of companies and large numbers.
+- If data is missing for a table cell, use "N/A".
 
 Context:
 {context}
 
 User Query: {query}
 
-Analytical Synthesis:"""
+Analytical Report:"""
         )
 
         self.conversational_template = PromptTemplate(

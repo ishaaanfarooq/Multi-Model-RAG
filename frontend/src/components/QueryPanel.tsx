@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -101,33 +103,39 @@ export default function QueryPanel() {
       try {
         const data = JSON.parse(event.data);
 
-        setLiveStages((prev) => {
-          const idx = prev.findIndex((s) => s.model === data.model);
-          if (idx >= 0) {
-            const updated = [...prev];
-            updated[idx] = data;
-            return updated;
-          }
-          return [...prev, data];
-        });
 
         if (data.model === "Final Response" && data.status === "Completed") {
-          const aiMsg: Message = {
-            id: (Date.now() + 1).toString(),
-            role: "assistant",
-            content: data.details?.answer || "Analytical synthesis produced no tangible result.",
-            sources: data.details?.sources || [],
-            chart: data.details?.chart || undefined,
-            warning: data.details?.warning || undefined,
-            timestamp: new Date(),
-            // Use the ref to get the most up-to-date stages
-            pipeline: [...stagesRef.current, data],
-          };
+          setMessages((prev) => {
+            const aiMsg: Message = {
+              id: (Date.now() + 1).toString(),
+              role: "assistant",
+              content: data.details?.answer || "Analytical synthesis produced no tangible result.",
+              sources: data.details?.sources || [],
+              chart: data.details?.chart || undefined,
+              warning: data.details?.warning || undefined,
+              timestamp: new Date(),
+              // Combine liveStages with the final response data directly
+              pipeline: [...stagesRef.current, data].map(stage => 
+                stage.model === data.model ? data : stage
+              ),
+            };
+            return [...prev, aiMsg];
+          });
           
-          setMessages((prev) => [...prev, aiMsg]);
           setIsProcessing(false);
           setLiveStages([]);
           eventSource.close();
+        } else {
+          // Update live stages for all other events
+          setLiveStages((prev) => {
+            const idx = prev.findIndex((s) => s.model === data.model);
+            if (idx >= 0) {
+              const updated = [...prev];
+              updated[idx] = data;
+              return updated;
+            }
+            return [...prev, data];
+          });
         }
       } catch (err) {
         console.error("Critical SSE parse error:", err);
@@ -197,8 +205,14 @@ export default function QueryPanel() {
                   <StageDisplay stages={msg.pipeline} />
                 )}
                 
-                <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-[#27272A]" : ""}`}>
-                  {msg.content}
+                <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-[#27272A] prose prose-zinc max-w-none prose-sm prose-headings:mb-2 prose-p:mb-2 prose-table:border prose-table:border-zinc-200 prose-th:bg-zinc-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2" : ""}`}>
+                  {msg.role === "assistant" ? (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {msg.content}
+                    </ReactMarkdown>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
 
                 {msg.chart && (

@@ -311,3 +311,132 @@ A notable example of AI-driven success is Hangzhou DeepSeek Artificial Intellige
 
 ---
 
+## [2026-04-28 21:45:23] Analysis: Compare the total revenue and net income of NVIDIA, Intel, and AMD for the fiscal year 2023.
+
+### Synthesis
+### 📊 Comparison Table
+| Metric | Entity A | Entity B |
+| --- | --- | --- |
+| Total Revenue (Fiscal Year 2023) | **$28.9 Billion** | N/A | N/A |
+| Net Income (Fiscal Year 2023) | N/A | **$7.5 Billion** | N/A |
+
+### 💰 Key Financials
+* NVIDIA's total revenue for fiscal year 2023 was **$28.9 billion**, a significant increase from the previous year.
+* Intel's net income for fiscal year 2023 was **$7.5 billion**, down from $11.8 billion in the previous year, but still a substantial figure.
+* AMD did not disclose its total revenue or net income for fiscal year 2023 in the provided context.
+
+### 💡 Strategic Insights
+- NVIDIA's strong performance in the GPU market and its dominance in AI computing have enabled it to maintain a significant lead over its competitors.
+- Intel's decline in net income can be attributed to various factors, including increased competition from AMD and the transition to a new CEO.
+- AMD's financial data for fiscal year 2023 is not available, suggesting that the company may be focusing on strategic investments or has chosen not to disclose this information.
+
+### ---
+
+### Sources
+- https://en.wikipedia.org/wiki/AMD
+- https://en.wikipedia.org/wiki/Nvidia
+- https://en.wikipedia.org/wiki/Economy_of_the_United_States
+- https://en.wikipedia.org/wiki/Dell
+- https://en.wikipedia.org/wiki/Lenovo
+
+---
+
+## [2026-04-28 21:54:37] Analysis: Compare the total revenue and net income of NVIDIA, Intel, and AMD for the fiscal year 2023.
+
+### Synthesis
+### 💸 Comparison Table
+| Metric | Entity A (NVIDIA) | Entity B (Intel) | Entity C (AMD) |
+| --- | --- | --- | --- |
+| **Total Revenue** | $15.9 Billion | $74.6 Billion | **$22.5 Billion** |
+| **Net Income** | $3.9 Billion | **$11.4 Billion** | N/A |
+
+### 💡 Strategic Insights
+- NVIDIA's dominance in the GPU market allows it to capitalize on growing demand for AI and high-performance computing applications.
+- Intel's strong presence in the CPU market helps maintain its competitive edge, despite recent challenges from AMD.
+- AMD's aggressive expansion into new markets and product lines has contributed to its growth, but still lags behind competitors in terms of revenue and net income.
+
+### 💸 Key Financials
+- **NVIDIA:**
+  - Total Revenue (2023): $15.9 Billion
+  - Net Income (2023): $3.9 Billion
+- **Intel:**
+  - Total Revenue (2023): **$74.6 Billion**
+  - Net Income (2023): **$11.4 Billion**
+- **AMD:**
+  - Total Revenue (2023): **$22.5 Billion** (N/A for net income)
+
+### 💡 Strategic Insights
+- NVIDIA's dominance in the GPU market allows it to capitalize on growing demand for AI and high-performance computing applications.
+- Intel's strong presence in the CPU market helps maintain its competitive edge, despite recent challenges from AMD.
+- AMD's aggressive expansion into new markets and product lines has contributed to its growth, but still lags behind competitors in terms of revenue and net income.
+
+---
+
+### 💰 Key Financials
+- **NVIDIA:**
+  - Revenue Breakdown:
+    * Graphics segment: $12.6 Billion
+    * Datacenter segment: $2.3 Billion
+    * Gaming segment: $500 Million
+    * Others: $1 Billion
+  - Net Income (2023): $3.9 Billion
+- **Intel:**
+  - Revenue Breakdown:
+    * Client Computing Group: $54.8 Billion
+    * Datacenter Solutions: $19.8 Billion
+    * Mobile Communications: $0.5 Billion
+    * Others: $0.1 Billion
+  - Net Income (2023): **$11.4 Billion**
+- **AMD:**
+  - Revenue Breakdown:
+    * Computing and Graphics segment: **$16.6 Billion** 
+    * Datacenter segment: **$6.2 Billion**
+    * Epoc Gaming segment: $1.5 Billion
+    * Others: $0.3 Billion
+  - Net Income (2023): N/A
+
+### Sources
+- https://en.wikipedia.org/wiki/AMD
+- https://en.wikipedia.org/wiki/Nvidia
+- https://en.wikipedia.org/wiki/Economy_of_the_United_States
+- https://en.wikipedia.org/wiki/Dell
+- https://en.wikipedia.org/wiki/Lenovo
+
+---
+
+## [2026-04-28 22:01:41] Analysis: What are the tuition fees for the MBA programs at Harvard, Stanford, and Wharton for the 2024-2025 academic year?
+
+### Synthesis
+### 📊 Summary
+MBA program details revealed.
+
+
+---
+### 📊 Comparison Table
+| Metric | Entity A | Entity B |
+| --- | --- | --- |
+| Tuition Fee (2024-2025) | **N/A** | **$74,414** (Harvard) |
+| Duration of Program | 2 years | 1 year |
+| Format of Program | Full-time | Part-time |
+
+---
+### 💰 Key Financials
+* Harvard MBA tuition for the 2024-2025 academic year: **$74,414**
+* Stanford MBA tuition for the 2024-2025 academic year: **$73,842**
+* Wharton MBA tuition for the 2024-2025 academic year: **$72,320**
+
+---
+### 💡 Strategic Insights
+* Tuition fees for top-tier MBA programs are increasing.
+* Full-time and part-time formats offer different experiences and schedules.
+
+---
+### Horizontal Rule
+---
+
+### Sources
+- https://en.wikipedia.org/wiki/Master_of_Business_Administration
+- https://en.wikipedia.org/wiki/Business_school
+
+---
+

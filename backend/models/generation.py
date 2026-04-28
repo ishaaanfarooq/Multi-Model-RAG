@@ -23,6 +23,8 @@ class GenerationModel:
 
 ### CRITICAL RULES:
 - DO NOT write long paragraphs.
+- ALWAYS ensure multiple newlines between sections to ensure markdown renders correctly.
+- Tables MUST have empty lines before and after them.
 - DO NOT mention "the provided text" or "the documents".
 - ALWAYS use EMOJIS in headers.
 - BOLD all names of companies and large numbers.

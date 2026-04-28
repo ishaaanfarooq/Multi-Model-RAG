@@ -22,9 +22,9 @@ class DualLLM:
         # Initialize Llama (Always available as fallback)
         self.llama_llm = Ollama(model=self.llama_model)
         
-        # Initialize Gemini if key exists
+        # Initialize Gemini if key exists and is not a placeholder
         self.gemini_llm = None
-        if self.gemini_api_key:
+        if self.gemini_api_key and self.gemini_api_key != "your_gemini_api_key_here":
             try:
                 self.gemini_llm = ChatGoogleGenerativeAI(
                     model=self.gemini_model,

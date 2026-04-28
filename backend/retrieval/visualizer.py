@@ -64,10 +64,11 @@ Python Code:"""
         full_context = "\n".join(context)
         
         # 1. Detection
-        detect_response = self.llm.invoke(self.detect_prompt.format(context=full_context, answer=answer)).strip().upper()
+        raw_detect = self.llm.invoke(self.detect_prompt.format(context=full_context, answer=answer))
+        detect_response = re.sub(r'[^a-zA-Z]', '', raw_detect).upper()
         
         if "YES" not in detect_response:
-            logger.info("VisualizerAgent: No data-rich content detected for visualization.")
+            logger.info(f"VisualizerAgent: No data-rich content detected. (LLM said: {raw_detect[:50]}...)")
             return None
 
         # 2. Code Generation

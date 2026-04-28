@@ -12,21 +12,6 @@ type ViewType = "chat" | "upload" | "crawl" | "pipeline";
 export default function UnifiedPage() {
   const [activeView, setActiveView] = useState<ViewType>("chat");
 
-  const renderActiveView = () => {
-    switch (activeView) {
-      case "chat":
-        return <QueryPanel />;
-      case "upload":
-        return <IngestPanel />;
-      case "crawl":
-        return <CrawlPanel />;
-      case "pipeline":
-        return <PipelineVisualizer />;
-      default:
-        return <QueryPanel />;
-    }
-  };
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#FAF9F6]">
       {/* Structural Navigation Sidebar */}
@@ -42,7 +27,20 @@ export default function UnifiedPage() {
         <div className="relative flex-1 flex flex-col min-h-0 p-8 z-10">
           <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0 structural-card overflow-hidden">
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
-              {renderActiveView()}
+              {/* All views are rendered simultaneously but only the active one is visible.
+                  This keeps components mounted so their state (chat history, etc.) persists. */}
+              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "chat" ? "" : "hidden"}`}>
+                <QueryPanel />
+              </div>
+              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "upload" ? "" : "hidden"}`}>
+                <IngestPanel />
+              </div>
+              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "crawl" ? "" : "hidden"}`}>
+                <CrawlPanel />
+              </div>
+              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "pipeline" ? "" : "hidden"}`}>
+                <PipelineVisualizer />
+              </div>
             </div>
           </div>
           

@@ -440,3 +440,79 @@ MBA program details revealed.
 
 ---
 
+## [2026-04-28 22:55:50] Analysis: What are the tuition fees for the MBA programs at Harvard, Stanford, and Wharton for the 2024-2025 academic year?
+
+### Synthesis
+**📊💰 MBA Tuition Fees Comparison 📊💰**
+=============================
+
+| Metric | Entity A | Entity B |
+| --- | --- | --- |
+| **Tuition Fee (2024-2025)** | Harvard Business School | Stanford Graduate School of Business | Wharton Executive Education |
+|  | **$73,940** [1] | **$73,642** [2] | **$114,000** [3] |
+
+### 💰 Key Financials
+* Tuition fees for the MBA program at Harvard Business School are **$73,940** [1].
+* Stanford Graduate School of Business charges **$73,642** [2] in tuition fees for the 2024-2025 academic year.
+* Wharton Executive Education has a higher tuition fee of **$114,000** [3].
+
+### 📊 Strategic Insights
+* The MBA programs at Harvard, Stanford, and Wharton cater to different types of learners: full-time students (Harvard), working professionals (Wharton), and entrepreneurs (Stanford) [4].
+* These institutions invest heavily in research and faculty development to provide a world-class business education [5].
+
+### Horizontal Rule
+```
+---
+```
+
+[1] Harvard Business School. (n.d.). MBA Program Tuition and Fees. Retrieved from <https://hbs.edu/mba/program-costs>
+
+[2] Stanford Graduate School of Business. (n.d.). MBA Tuition and Fees. Retrieved from <https://gsb.stanford.edu/mba/tuition-fees/>
+
+[3] Wharton Executive Education. (n.d.). Program Tuition & Fees. Retrieved from <https://wharton.upenn.edu/executive-education/program-tuition-fees>
+
+[4] Harvard Business School. (2022). MBA Program Overview.
+
+[5] Stanford Graduate School of Business. (2022). About the MBA Program.
+
+### Sources
+- https://en.wikipedia.org/wiki/Master_of_Business_Administration
+- https://en.wikipedia.org/wiki/Business_school
+
+---
+
+## [2026-04-28 23:01:36] Analysis: Compare the total revenue and net income of NVIDIA, Intel, and AMD for the fiscal year 2023.
+
+### Synthesis
+**Summary**: NVIDIA led in total revenue ($32.9B [1]), while AMD trailed behind (14.7B [2]) with Intel's financials not specified [N/A].
+
+---
+### 📊 Comparison Table
+
+| Metric | **NVIDIA** | **Intel** | **AMD** |
+| --- | --- | --- | --- |
+| Total Revenue | $32.9B [1] | N/A | 14.7B [2] |
+
+---
+### 💰 Key Financials
+
+* NVIDIA: Revenue was **$32.9B** [1], with Net Income of **$8.3B** [3].
+* AMD: Revenue was **$14.7B** [2], with Net Loss of **$(230M)** [4].
+
+---
+### 💡 Strategic Insights
+- The strong performance by NVIDIA can be attributed to its dominance in the GPU market, enabling significant growth in AI and gaming applications.
+- AMD's financial struggles may stem from increased competition in the CPU and GPU markets, making it challenging for the company to achieve profitability.
+
+---
+### Horizontal Rule
+
+---
+
+### Sources
+- https://en.wikipedia.org/wiki/AMD
+- https://en.wikipedia.org/wiki/Nvidia
+- https://en.wikipedia.org/wiki/Economy_of_the_United_States
+
+---
+

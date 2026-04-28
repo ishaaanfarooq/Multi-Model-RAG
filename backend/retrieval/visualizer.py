@@ -47,12 +47,13 @@ Response:"""
             template="""You are a Lead Data Scientist. Write a Python script using Matplotlib to create a professional high-fidelity chart based on the data in the context/answer.
 
 REQUIREMENTS:
-1. DESIGN: Use a sleek, modern design. Background color MUST be '#FDFCFB' (soft wheat). Use a palette of Amber (#B45309), Zinc (#71717A), and Emerald (#059669).
-2. STRUCTURE: Use `fig, ax = plt.subplots(figsize=(10, 6))` for the plot.
-3. DATA: Extract all relevant numerical values for entities like Tesla, Nvidia, Meta, etc., and their associated years or metrics.
-4. SAVE: Save the final image to: '{output_path}'
-5. CLEANUP: Do NOT use `plt.show()`, `plt.style.use()`, or any interactive commands.
-6. OUTPUT: Return ONLY the raw python code. No markdown, no intro text.
+1. IMPORTS: `import matplotlib.pyplot as plt`, `import numpy as np`.
+2. DESIGN: Use a sleek, modern design. Background color MUST be '#FDFCFB' (soft wheat). Use a palette of Amber (#B45309), Zinc (#71717A), and Emerald (#059669).
+3. ALIGNMENT: If making a bar chart with multiple entities, use `x = np.arange(len(labels))` and adjust bar positions using `x - width/2` etc. to avoid 'range' errors.
+4. DATA: Extract all relevant numerical values for entities mentioned in the query.
+5. SAVE: Save the final image to: '{output_path}'
+6. CLEANUP: Use `plt.tight_layout()`. Do NOT use `plt.show()`, `plt.style.use()`, or any interactive commands.
+7. OUTPUT: Return ONLY the raw python code. No markdown, no intro text.
 
 Python Code:"""
         )

@@ -14,7 +14,7 @@ class DualLLM:
     A wrapper that prioritizes Gemini API and falls back to Local Llama (Ollama)
     if the API key is missing or the call fails.
     """
-    def __init__(self, llama_model: str = "llama3.2", gemini_model: str = "gemini-1.5-pro"):
+    def __init__(self, llama_model: str = "llama3.2", gemini_model: str = "gemini-2.0-flash"):
         self.llama_model = llama_model
         self.gemini_model = gemini_model
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -29,7 +29,8 @@ class DualLLM:
                 self.gemini_llm = ChatGoogleGenerativeAI(
                     model=self.gemini_model,
                     google_api_key=self.gemini_api_key,
-                    temperature=0.7
+                    temperature=0.7,
+                    max_retries=1,
                 )
                 logger.info("Gemini LLM initialized successfully.")
             except Exception as e:

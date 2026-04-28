@@ -1,4 +1,5 @@
 import asyncio
+import re
 import logging
 from typing import AsyncGenerator
 import json
@@ -26,7 +27,7 @@ class MasterOrchestrator:
         self.visualizer = VisualizerAgent()
         self.notebook = NotebookMemory()
         
-    async def process_query_stream(self, query: str, history: str = "") -> AsyncGenerator[str, None]:
+    async def process_query_stream(self, query: str, history: str = "", image_context: str = "") -> AsyncGenerator[str, None]:
         """
         Executes the entire RAG pipeline and yields SSE JSON strings at each step.
         """
@@ -78,10 +79,34 @@ class MasterOrchestrator:
         elif tool == "Web_Search":
             yield emit("Web Search", "Processing", f"Searching the live internet for: {search_query}")
             try:
-                doc_texts, sources = await search_web(search_query, max_results=5)
+                # ─── Query Decomposition (NEW) ───
+                # If the query is complex, break it down for better coverage
+                queries = [search_query]
+                if any(x in search_query.lower() for x in ["compare", "difference", "versus", "vs", "and", ","]):
+                    yield emit("Agent Router", "Processing", "Decomposing complex query into focused sub-queries...")
+                    decomposition_prompt = f"Decompose this complex query into 3 short, specific search queries to get balanced results for all entities mentioned: '{search_query}'. Return ONLY a JSON list of strings."
+                    try:
+                        decomp_raw = self.generator.llm.invoke(decomposition_prompt).strip()
+                        # Clean up possible markdown
+                        decomp_json = re.sub(r'```json\s*|\s*```', '', decomp_raw)
+                        queries = json.loads(decomp_json)
+                        yield emit("Agent Router", "Completed", f"Expanded to {len(queries)} research paths")
+                    except:
+                        logger.warning("Query decomposition failed, using original query.")
+                
+                # Perform searches (could be parallelized for speed)
+                all_docs = []
+                all_sources = []
+                for q in queries:
+                    doc_texts, sources = await search_web(q, max_results=3)
+                    all_docs.extend(doc_texts)
+                    all_sources.extend(sources)
+
+                doc_texts = all_docs
+                sources = all_sources
 
                 if doc_texts:
-                    yield emit("Web Search", "Completed", f"Retrieved {len(doc_texts)} live web results")
+                    yield emit("Web Search", "Completed", f"Retrieved {len(doc_texts)} live web results across all paths")
                 else:
                     yield emit("Web Search", "Completed", "No web results found — falling back to Knowledge Base")
                     tool = "Search_Knowledge_Base"   # fall-through below
@@ -94,7 +119,10 @@ class MasterOrchestrator:
             # If web search succeeded, generate + verify + visualize then return
             if tool == "Web_Search":
                 yield emit("Generation", "Processing", "Synthesizing answer using live web data")
-                answer = await self.generator.generate_answer(search_query, doc_texts, mode="analytical")
+                gen_context = doc_texts
+                if image_context:
+                    gen_context = [f"[Image Analysis]:\n{image_context}"] + doc_texts
+                answer = await self.generator.generate_answer(search_query, gen_context, sources=sources, mode="analytical")
                 yield emit("Generation", "Completed", "Answer drafted successfully")
 
                 # Verification
@@ -120,7 +148,9 @@ class MasterOrchestrator:
                     logger.error(f"Visualizer failed: {e}")
                     yield emit("Visualizer Agent", "Error", f"Visualization failed: {str(e)[:80]}")
 
-                final_details = {"answer": answer, "sources": sources}
+                # Build source map for inline citations
+                source_map = {str(i+1): src for i, src in enumerate(sources)}
+                final_details = {"answer": answer, "sources": sources, "source_map": source_map}
                 if chart_filename:
                     final_details["chart"] = f"/uploads/{chart_filename}"
                 if warning:
@@ -156,7 +186,10 @@ class MasterOrchestrator:
         yield emit("Reranking Model", "Completed", f"Filtered down to top {len(ranked_docs)} most relevant contexts")
 
         yield emit("Generation", "Processing", "Synthesizing answer using LLM and retrieved context")
-        answer = await self.generator.generate_answer(search_query, ranked_docs, mode="analytical")
+        gen_context = ranked_docs
+        if image_context:
+            gen_context = [f"[Image Analysis]:\n{image_context}"] + ranked_docs
+        answer = await self.generator.generate_answer(search_query, gen_context, sources=list(set(sources)), mode="analytical")
         yield emit("Generation", "Completed", "Answer drafted successfully")
 
         # Verification
@@ -183,7 +216,9 @@ class MasterOrchestrator:
             yield emit("Visualizer Agent", "Error", f"Visualization failed: {str(e)[:80]}")
 
         # Final Response
-        final_details = {"answer": answer, "sources": list(set(sources))}
+        unique_sources = list(set(sources))
+        source_map = {str(i+1): src for i, src in enumerate(unique_sources)}
+        final_details = {"answer": answer, "sources": unique_sources, "source_map": source_map}
         if chart_filename:
             final_details["chart"] = f"/uploads/{chart_filename}"
         if warning:

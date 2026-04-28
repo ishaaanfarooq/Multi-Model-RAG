@@ -1,12 +1,15 @@
 import asyncio
 import json
-from fastapi import APIRouter, File, UploadFile, Request
+import os
+import uuid
+from fastapi import APIRouter, File, UploadFile, Request, Form
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from orchestrator.master_llm import MasterOrchestrator
 from ingestion.document_parser import DocumentParser
 from ingestion.web_crawler import WebCrawler
+from retrieval.image_analyzer import ImageAnalyzer
 
 router = APIRouter()
 
@@ -26,6 +29,7 @@ class CrawlRequest(BaseModel):
 orchestrator = MasterOrchestrator()
 doc_parser = DocumentParser()
 web_crawler = WebCrawler()
+image_analyzer = ImageAnalyzer()
 
 @router.post("/query", response_model=QueryResponse)
 async def process_query(request: QueryRequest):
@@ -122,11 +126,59 @@ def health_check():
 async def pipeline_stream(query: str, history: str = "", request: Request = None):
     """
     Server-Sent Events endpoint to stream pipeline status to the frontend.
+    Text-only queries.
     """
     async def event_generator():
         try:
             async for event in orchestrator.process_query_stream(query, history):
                 if request and await request.is_disconnected():
+                    break
+                yield event
+        except Exception as e:
+            yield json.dumps({"model": "System Error", "status": "Failed", "action": str(e)})
+
+    return EventSourceResponse(event_generator())
+
+
+@router.post("/stream")
+async def pipeline_stream_with_image(
+    request: Request,
+    query: str = Form(...),
+    history: str = Form(""),
+    image: UploadFile = File(None),
+):
+    """
+    SSE endpoint that also accepts an optional image upload.
+    The image is analyzed by a vision model and the description is
+    injected into the RAG pipeline as additional context.
+    """
+    image_context = ""
+    
+    if image and image.filename:
+        # Save uploaded image
+        ext = os.path.splitext(image.filename)[1] or ".png"
+        img_filename = f"upload_{uuid.uuid4().hex[:8]}{ext}"
+        img_path = os.path.join("uploads", img_filename)
+        
+        content = await image.read()
+        with open(img_path, "wb") as f:
+            f.write(content)
+        
+        # Analyze image
+        image_context = await image_analyzer.analyze(img_path, query)
+    
+    async def event_generator():
+        try:
+            # Emit image analysis step if image was provided
+            if image_context:
+                yield json.dumps({
+                    "model": "Image Analyzer",
+                    "status": "Completed",
+                    "action": "Extracted visual data from uploaded image"
+                })
+            
+            async for event in orchestrator.process_query_stream(query, history, image_context=image_context):
+                if await request.is_disconnected():
                     break
                 yield event
         except Exception as e:

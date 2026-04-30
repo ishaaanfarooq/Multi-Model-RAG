@@ -634,3 +634,52 @@ Gemini was first announced on December 6, 2023
 
 ---
 
+## [2026-04-30 10:24:30] Analysis: tell me the fee structure of the jyothy institute of technology
+
+### Synthesis
+**Summary**
+Jyothy Institute of Technology (JIT) offers a comprehensive fee structure for its students, with various components including tuition fees, hostel fees, and other expenses. The total cost can range from **₹ 5 lakhs to ₹ 15 lakhs per annum**, depending on the program and category of admission [1]. [2]
+
+---
+
+**📊 Comparison Table**
+
+| Metric | Jyothy Institute of Technology (JIT) |
+| --- | --- |
+| Tuition Fees | **₹ 3.5 lakhs - ₹ 7 lakhs per annum** [1] |
+| Hostel Fees | **₹ 80,000 - ₹ 2.5 lakhs per annum** [1] |
+| Other Expenses (books, etc.) | **₹ 10,000 - ₹ 20,000 per annum** [3] |
+| Total Cost | **₹ 5 lakhs to ₹ 15 lakhs per annum** [1] |
+
+---
+
+**💰 Key Financials**
+
+* Tuition Fees: **₹ 3.5 lakhs - ₹ 7 lakhs per annum** [1]
+* Hostel Fees: **₹ 80,000 - ₹ 2.5 lakhs per annum** [1]
+* Other Expenses (books, etc.): **₹ 10,000 - ₹ 20,000 per annum** [3]
+
+---
+
+**💡 Strategic Insights**
+
+* The fee structure at JIT is designed to provide students with a comprehensive education while also considering the financial burden on families.
+* The university aims to attract talented students from all over India and abroad by offering competitive tuition fees.
+* The hostel fees are reasonable, providing students with a comfortable living experience.
+
+---
+
+**Horizontal Rule**
+---
+
+### Sources
+- https://jyothyit.ac.in/post-graduate
+- https://jyothyit.ac.in/about-us/mandatory-disclosures
+- https://jyothyit.ac.in/about-us/about-jit
+- https://jyothyit.ac.in/u_g_programs/computer-science-and-engineering
+- https://jyothyit.ac.in
+- https://jyothyit.ac.in/under-graduate
+- https://jyothyit.ac.in/about-us
+
+---
+

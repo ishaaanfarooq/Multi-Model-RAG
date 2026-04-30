@@ -125,28 +125,47 @@ class MasterOrchestrator:
                 answer = await self.generator.generate_answer(search_query, gen_context, sources=sources, mode="analytical")
                 yield emit("Generation", "Completed", "Answer drafted successfully")
 
-                # Verification
-                yield emit("Verification Module", "Processing", "Fact-checking answer against retrieved web context")
-                is_valid = await self.verifier.verify(answer, doc_texts)
-                warning = None
-                if is_valid:
-                    yield emit("Verification Module", "Completed", "Response passed factuality check (PASS)")
-                else:
-                    yield emit("Verification Module", "Completed", "Verification flagged potential inaccuracies (FAIL)")
-                    warning = "The AI may not have found all details in the retrieved web sources. Treat specific figures as approximate."
-
-                # Visualization
+                # Verification & Visualization with Self-Healing Loop
+                max_retries = 1
+                retry_count = 0
+                is_valid = False
                 chart_filename = None
-                yield emit("Visualizer Agent", "Processing", "Scanning for numerical data to generate a visual chart...")
-                try:
-                    chart_filename = await self.visualizer.run(doc_texts, answer)
-                    if chart_filename:
-                        yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
+                warning = None
+
+                while retry_count <= max_retries and not is_valid:
+                    yield emit("Verification & Visualization", "Processing", "Running fact-check and chart generation concurrently...")
+                    
+                    async def safe_visualize():
+                        try:
+                            return await self.visualizer.run(doc_texts, answer)
+                        except Exception as e:
+                            logger.error(f"Visualizer failed: {e}")
+                            return None
+                            
+                    verify_task = asyncio.create_task(self.verifier.verify(answer, doc_texts))
+                    visualize_task = asyncio.create_task(safe_visualize())
+                    
+                    is_valid, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
+                    
+                    if is_valid:
+                        yield emit("Verification Module", "Completed", "Response passed factuality check (PASS)")
+                        chart_filename = current_chart_filename
+                        if chart_filename:
+                            yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
+                        else:
+                            yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
+                        break
                     else:
-                        yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
-                except Exception as e:
-                    logger.error(f"Visualizer failed: {e}")
-                    yield emit("Visualizer Agent", "Error", f"Visualization failed: {str(e)[:80]}")
+                        yield emit("Verification Module", "Completed", "Verification flagged potential inaccuracies (FAIL)")
+                        if retry_count < max_retries:
+                            yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
+                            strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context. DO NOT include outside information."
+                            answer = await self.generator.generate_answer(strict_query, gen_context, sources=sources, mode="analytical")
+                            retry_count += 1
+                        else:
+                            warning = "The AI may not have found all details in the retrieved web sources. Treat specific figures as approximate."
+                            chart_filename = current_chart_filename
+                            break
 
                 # Build source map for inline citations
                 source_map = {str(i+1): src for i, src in enumerate(sources)}
@@ -192,28 +211,47 @@ class MasterOrchestrator:
         answer = await self.generator.generate_answer(search_query, gen_context, sources=list(set(sources)), mode="analytical")
         yield emit("Generation", "Completed", "Answer drafted successfully")
 
-        # Verification
-        yield emit("Verification Module", "Processing", "Checking generated answer against original retrieved context for hallucinations")
-        is_valid = await self.verifier.verify(answer, ranked_docs)
-        warning = None
-        if is_valid:
-            yield emit("Verification Module", "Completed", "Response passed factuality check (PASS)")
-        else:
-            yield emit("Verification Module", "Completed", "Verification flagged potential inaccuracies (FAIL)")
-            warning = "The AI's answer may contain information not fully supported by the retrieved source documents."
-
-        # Visualization
+        # Verification & Visualization with Self-Healing Loop
+        max_retries = 1
+        retry_count = 0
+        is_valid = False
         chart_filename = None
-        yield emit("Visualizer Agent", "Processing", "Scanning for numerical data to generate a visual chart...")
-        try:
-            chart_filename = await self.visualizer.run(ranked_docs, answer)
-            if chart_filename:
-                yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
+        warning = None
+
+        while retry_count <= max_retries and not is_valid:
+            yield emit("Verification & Visualization", "Processing", "Running fact-check and chart generation concurrently...")
+            
+            async def safe_visualize():
+                try:
+                    return await self.visualizer.run(ranked_docs, answer)
+                except Exception as e:
+                    logger.error(f"Visualizer failed: {e}")
+                    return None
+                    
+            verify_task = asyncio.create_task(self.verifier.verify(answer, ranked_docs))
+            visualize_task = asyncio.create_task(safe_visualize())
+            
+            is_valid, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
+            
+            if is_valid:
+                yield emit("Verification Module", "Completed", "Response passed factuality check (PASS)")
+                chart_filename = current_chart_filename
+                if chart_filename:
+                    yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
+                else:
+                    yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
+                break
             else:
-                yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
-        except Exception as e:
-            logger.error(f"Visualizer failed: {e}")
-            yield emit("Visualizer Agent", "Error", f"Visualization failed: {str(e)[:80]}")
+                yield emit("Verification Module", "Completed", "Verification flagged potential inaccuracies (FAIL)")
+                if retry_count < max_retries:
+                    yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
+                    strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context. DO NOT include outside information."
+                    answer = await self.generator.generate_answer(strict_query, gen_context, sources=list(set(sources)), mode="analytical")
+                    retry_count += 1
+                else:
+                    warning = "The AI's answer may contain information not fully supported by the retrieved source documents despite self-healing attempts."
+                    chart_filename = current_chart_filename
+                    break
 
         # Final Response
         unique_sources = list(set(sources))

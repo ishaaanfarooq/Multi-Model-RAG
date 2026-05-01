@@ -1,0 +1,26 @@
+data: {"model": "Master LLM Orchestrator", "status": "Processing", "action": "Analyzing user intent and planning execution"}
+
+data: {"model": "Master LLM Orchestrator", "status": "Completed", "action": "Delegating task to Agent Router"}
+
+data: {"model": "Agent Router", "status": "Processing", "action": "Classifying intent to select the optimal Tool..."}
+
+data: {"model": "Agent Router", "status": "Completed", "action": "Selected Tool: [Web_Search]"}
+
+data: {"model": "Web Search", "status": "Processing", "action": "Searching the live internet for: What is the revenue of Apple"}
+
+data: {"model": "Web Search", "status": "Completed", "action": "Retrieved 3 live web results across all paths"}
+
+data: {"model": "Generation", "status": "Processing", "action": "Synthesizing answer using live web data"}
+
+data: {"model": "Generation", "status": "Completed", "action": "Answer drafted successfully"}
+
+: ping - 2026-04-30 05:40:45.404358
+
+data: {"model": "Verification & Visualization", "status": "Processing", "action": "Running fact-check and chart generation concurrently..."}
+
+data: {"model": "Verification Module", "status": "Completed", "action": "Response passed factuality check (PASS)"}
+
+data: {"model": "Visualizer Agent", "status": "Completed", "action": "No significant numerical data found for charting."}
+
+data: {"model": "Final Response", "status": "Completed", "action": "Pipeline finished", "details": {"answer": "**Summary**: Apple's revenue has more than doubled under Tim Cook's leadership, increasing from **$368B** [1] in 2011 to **$416B** [2] in 2025. [3]\n\n---\n### \ud83d\udcca Comparison Table\n| Metric | Apple Inc. | Revenue Commissioners |\n| --- | --- | --- |\n| Revenue (2025) | **$416B** [2] | N/A |\n| Staff | Over 135,000 [1] | More than 7,000 [4] |\n| Headquarters | Cupertino, California | Dublin Castle |\n\n---\n### \ud83d\udcb0 Key Financials\n* Revenue was **$28.9B** [1] in 2011 under Steve Jobs.\n* Apple's market value increased from **$348B** [1] to **$1.9T** [2] between 2011 and 2025.\n* Revenue Commissioners had more than 7,000 full-time equivalent staff in December 2023 [4].\n---\n### \ud83d\udca1 Strategic Insights\n\ud83d\udc49 Apple's revenue growth under Tim Cook can be attributed to the company's strong brand presence, innovative product lineup, and strategic expansion into new markets. \ud83d\udc49 The significant increase in market value also reflects the growing demand for Apple's products and services.\n---\n---\n### CITATION RULES (CRITICAL):\n* Sources used: [1] - [3]\n* Note: Due to the lack of direct revenue data from Revenue Commissioners, only general information about their staff and headquarters was included in the comparison table.", "sources": ["https://en.wikipedia.org/wiki/Tim_Cook", "https://en.wikipedia.org/wiki/Apple_Inc.", "https://en.wikipedia.org/wiki/Revenue_Commissioners"], "source_map": {"1": "https://en.wikipedia.org/wiki/Tim_Cook", "2": "https://en.wikipedia.org/wiki/Apple_Inc.", "3": "https://en.wikipedia.org/wiki/Revenue_Commissioners"}}}
+

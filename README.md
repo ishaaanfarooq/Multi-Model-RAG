@@ -21,6 +21,14 @@ A sophisticated, cloud-ready Retrieval-Augmented Generation (RAG) system designe
   - **PDF/Text Upload**: Ingest and index local documents.
   - **Web Crawler**: Deep-crawl entire websites to build a custom knowledge base.
 
+## 🏗️ Core Architecture Flow
+
+1.  **Ingestion Phase**: Documents or URLs are processed, chunked, and embedded using `sentence-transformers`.
+2.  **Vector Storage**: Embeddings are stored in a **FAISS** index for ultra-fast retrieval.
+3.  **Query Handling**: The **Agentic Router** analyzes the user intent and selects the best tool (Search, RAG, or Chat).
+4.  **Reasoning Loop**: The **Orchestrator** generates a response, while parallel agents handle verification and data visualization.
+5.  **Self-Correction**: If the **Hallucination Detector** finds inaccuracies, the system automatically regenerates the response.
+
 ## 🛠 Tech Stack
 
 - **Backend**: FastAPI (Python), LangChain, Ollama (Llama 3.2), FAISS, BeautifulSoup, DuckDuckGo Search.

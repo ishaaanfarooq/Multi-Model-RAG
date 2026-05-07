@@ -3,6 +3,10 @@ from fastapi import FastAPI, APIRouter
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router as api_router
+from utils.logger_config import setup_logging
+
+# Initialize logging
+setup_logging()
 
 app = FastAPI(title="Multi-Model RAG System API")
 

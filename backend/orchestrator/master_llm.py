@@ -145,10 +145,11 @@ class MasterOrchestrator:
                     verify_task = asyncio.create_task(self.verifier.verify(answer, doc_texts))
                     visualize_task = asyncio.create_task(safe_visualize())
                     
-                    is_valid, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
+                    is_valid_data, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
+                    is_valid, verify_reason = is_valid_data
                     
                     if is_valid:
-                        yield emit("Verification Module", "Completed", "Response passed factuality check (PASS)")
+                        yield emit("Verification Module", "Completed", f"Response passed factuality check: {verify_reason}")
                         chart_filename = current_chart_filename
                         if chart_filename:
                             yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
@@ -156,7 +157,7 @@ class MasterOrchestrator:
                             yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
                         break
                     else:
-                        yield emit("Verification Module", "Completed", "Verification flagged potential inaccuracies (FAIL)")
+                        yield emit("Verification Module", "Completed", f"Verification flagged potential inaccuracies: {verify_reason}")
                         if retry_count < max_retries:
                             yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
                             strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context. DO NOT include outside information."
@@ -231,10 +232,11 @@ class MasterOrchestrator:
             verify_task = asyncio.create_task(self.verifier.verify(answer, ranked_docs))
             visualize_task = asyncio.create_task(safe_visualize())
             
-            is_valid, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
+            is_valid_data, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
+            is_valid, verify_reason = is_valid_data
             
             if is_valid:
-                yield emit("Verification Module", "Completed", "Response passed factuality check (PASS)")
+                yield emit("Verification Module", "Completed", f"Response passed factuality check: {verify_reason}")
                 chart_filename = current_chart_filename
                 if chart_filename:
                     yield emit("Visualizer Agent", "Completed", "Data chart generated successfully", {"chart": f"/uploads/{chart_filename}"})
@@ -242,7 +244,7 @@ class MasterOrchestrator:
                     yield emit("Visualizer Agent", "Completed", "No significant numerical data found for charting.")
                 break
             else:
-                yield emit("Verification Module", "Completed", "Verification flagged potential inaccuracies (FAIL)")
+                yield emit("Verification Module", "Completed", f"Verification flagged potential inaccuracies: {verify_reason}")
                 if retry_count < max_retries:
                     yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
                     strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context. DO NOT include outside information."

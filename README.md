@@ -66,6 +66,20 @@ A sophisticated, cloud-ready Retrieval-Augmented Generation (RAG) system designe
 4. **Access the UI**:
    Open [http://localhost:3000](http://localhost:3000) in your browser.
 
+## 🐳 Docker Deployment
+
+The system is fully containerized. To run the entire stack (Frontend, Backend, Ollama) using Docker:
+
+1.  **Start Services**:
+    ```bash
+    docker-compose up --build
+    ```
+2.  **Pull Models**:
+    Once the containers are running, you may need to pull the Llama model into the Ollama container:
+    ```bash
+    docker exec -it multimodelrag-ollama-1 ollama pull llama3.2
+    ```
+
 ## 📁 Repository Structure
 
 - `backend/`: FastAPI server, orchestrator logic, and RAG components.

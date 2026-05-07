@@ -11,7 +11,11 @@ class VerificationModule:
         self.prompt_template = PromptTemplate(
             input_variables=["context", "answer"],
             template="""You are a verification AI. Determine if the generated Answer is based on the provided Context.
-Respond with 'PASS' if the answer is factual and primarily supported by the context. Respond with 'FAIL' ONLY if the answer contains significant, completely fabricated hallucinations that contradict the context. Output EXACTLY 'PASS' or 'FAIL'.
+Respond with 'PASS' if the answer is factual and primarily supported by the context. Respond with 'FAIL' if the answer contains significant hallucinations. 
+
+Return your response in the following format:
+Result: [PASS or FAIL]
+Reason: [One brief sentence explaining why]
 
 Context:
 {context}
@@ -19,15 +23,22 @@ Context:
 Answer:
 {answer}
 
-Verification Result (PASS/FAIL):"""
+Verification Output:"""
         )
 
-    async def verify(self, answer: str, context: list[str]) -> bool:
+    async def verify(self, answer: str, context: list[str]) -> tuple[bool, str]:
         if not context:
-            return False
+            return False, "No context provided for verification."
             
         context_str = "\n".join(context)
         formatted_prompt = self.prompt_template.format(context=context_str, answer=answer)
         
-        response = self.llm.invoke(formatted_prompt).strip().upper()
-        return "PASS" in response
+        response = self.llm.invoke(formatted_prompt).strip()
+        
+        # Simple parsing for Result and Reason
+        is_valid = "Result: PASS" in response
+        reason = "No reason provided."
+        if "Reason:" in response:
+            reason = response.split("Reason:")[1].strip().split("\n")[0]
+            
+        return is_valid, reason

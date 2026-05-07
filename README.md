@@ -1,4 +1,5 @@
 # Multi-Model RAG System 🚀
+![Status](https://img.shields.io/badge/Status-Maintained-brightgreen)
 
 A sophisticated, cloud-ready Retrieval-Augmented Generation (RAG) system designed for deep reasoning and high reliability. This system utilizes a multi-model architecture where specialized agents collaborate to provide accurate, verified, and context-aware responses.
 

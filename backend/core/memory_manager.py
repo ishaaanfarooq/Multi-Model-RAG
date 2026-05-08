@@ -35,3 +35,12 @@ class NotebookMemory:
             return "Notebook is empty."
         with open(self.notebook_path, "r") as f:
             return f.read()
+
+    def clear_notebook(self):
+        """
+        Deletes the persistent notebook file.
+        """
+        if os.path.exists(self.notebook_path):
+            os.remove(self.notebook_path)
+            return True
+        return False

@@ -87,6 +87,13 @@ The system is fully containerized. To run the entire stack (Frontend, Backend, O
 - `frontend/`: Next.js application with real-time pipeline visualizer.
 - `deployment/`: AWS architecture diagrams and deployment notes.
 
+## 🚀 Future Roadmap
+
+- [ ] **Multi-User Authentication**: Secure session management for multiple concurrent users.
+- [ ] **Cloud Deployment Templates**: One-click deployment scripts for AWS (Terraform/CDK).
+- [ ] **Advanced Tool Use**: Integration with Python REPL and dynamic API execution.
+- [ ] **Mobile Responsive UI**: Dedicated mobile views for on-the-go analysis.
+
 ## 📝 License
 
 Distributed under the MIT License.

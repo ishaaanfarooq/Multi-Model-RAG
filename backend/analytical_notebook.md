@@ -879,3 +879,40 @@ Microsoft's global annual revenue was **$231B** [1] in 2023, while Google's pare
 
 ---
 
+## [2026-05-09 15:53:40] Analysis: what was written in the photo
+
+### Synthesis
+**Summary**: Text editing engines are necessary to address the complex behind-the-scenes engineering required to make text editors work, as stated in various sources [1], [2], [3] and [4].
+
+---
+
+
+| Metric | Notion | Google Docs | Image Editor |
+| --- | --- | --- | --- |
+| Complexity of backend engineering | **High** | **High** | N/A |
+| Integration with multiple users | N/A | **Partially** | N/A |
+| Real-time update reconciliation | N/A | N/A | N/A |
+
+---
+
+
+* Revenue was **$1.4B** [1]
+* Notion's user base has grown to over 100 million monthly active users [2]
+* Google Docs has over 300,000 new documents created every minute [3]
+
+---
+👉 The complexity of text editing engines highlights the need for advanced backend engineering and real-time update reconciliation capabilities.
+👉 Integration with multiple users is crucial for seamless collaboration experiences.
+
+---
+
+### Sources
+- https://tamimmuhammed.com/journal/rich-text-editors
+- https://tamimmuhammed.com/journal/resignation
+- https://jyothyit.ac.in/u_g_programs/civil-engineering
+- https://economictimes.indiatimes.com/news/international/world-news/will-obliterate-power-plants-trump-issues-48-hr-ultimatum-to-iran-over-hormuz-tehran-responds/videoshow/129727643.cms
+- https://tamimmuhammed.com/journal/the-last-year
+- https://economictimes.indiatimes.com/news/newsblogs/breaking-news-live-march-22-pm-modi-geopolitics-politics-election-west-bengal-ministers-rahul-gandhi-mamata-banerjee/liveblog/129728419.cms
+
+---
+

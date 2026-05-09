@@ -49,6 +49,54 @@ class MasterOrchestrator:
         else:
             yield emit("Master LLM Orchestrator", "Completed", "Delegating task to Agent Router")
 
+        # 1.25 Image-Aware Routing
+        # When an image is uploaded, check if the query is primarily about the image.
+        # If so, bypass the KB/Web search and answer directly from the image analysis.
+        if image_context:
+            image_keywords = ["photo", "image", "picture", "screenshot", "uploaded", "this",
+                              "describe", "written", "show", "see", "look", "what is", "what's",
+                              "tell me about", "analyze", "read", "content", "says", "text in"]
+            query_lower = search_query.lower()
+            is_image_centric = any(kw in query_lower for kw in image_keywords)
+
+            if is_image_centric:
+                yield emit("Image-Aware Router", "Processing", "Query is about the uploaded image — answering from visual analysis")
+
+                # Generate answer directly from image context only
+                yield emit("Generation", "Processing", "Synthesizing answer from image analysis data")
+                answer = await self.generator.generate_answer(
+                    search_query,
+                    [f"[Image Analysis]:\n{image_context}"],
+                    sources=["Uploaded Image"],
+                    mode="analytical"
+                )
+                yield emit("Generation", "Completed", "Answer generated from image analysis")
+
+                # Run verification against the image context
+                yield emit("Verification Module", "Processing", "Verifying answer against extracted image data...")
+                is_valid, verify_reason = await self.verifier.verify(answer, [image_context])
+                if is_valid:
+                    yield emit("Verification Module", "Completed", f"Response passed factuality check: {verify_reason}")
+                else:
+                    yield emit("Verification Module", "Completed", f"Verification note: {verify_reason}")
+
+                # Save to notebook
+                self.notebook.save_entry(query, answer, ["Uploaded Image"])
+
+                yield emit("Final Response", "Completed", "Pipeline finished", {
+                    "answer": answer,
+                    "sources": ["Uploaded Image"],
+                    "source_map": {"1": "Uploaded Image"}
+                })
+                return
+            else:
+                # Image is supplementary — enrich the search query with visual data
+                yield emit("Image-Aware Router", "Processing", "Image detected as supplementary context — enriching search query")
+                # Take the first 300 chars of image analysis to augment the search
+                image_summary = image_context[:300].replace("\n", " ")
+                search_query = f"{search_query}. Visual context: {image_summary}"
+                yield emit("Image-Aware Router", "Completed", "Search query enriched with image analysis data")
+
         # 1.5 Agent Routing
         yield emit("Agent Router", "Processing", "Classifying intent to select the optimal Tool...")
         tool = "Search_Knowledge_Base"
@@ -60,6 +108,7 @@ class MasterOrchestrator:
         except Exception as e:
             logger.error(f"Agent Router exception: {e}")
             yield emit("Agent Router", "Completed", f"Fallback to Default Tool: [{tool}] (Error: {str(e)[:60]})")
+
 
         # ─── DIRECT CHAT branch ────────────────────────────────────────────
         if tool == "Direct_Chat":

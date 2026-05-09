@@ -62,8 +62,8 @@ class ImageAnalyzer:
                 import requests
                 ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
                 
-                # Use the quantized model that fits in limited VRAM (4GB)
-                vision_model = os.getenv("OLLAMA_VISION_MODEL", "llava:7b-v1.5-q4_0")
+                # Use the tiny moondream model that comfortably fits in 4GB VRAM
+                vision_model = os.getenv("OLLAMA_VISION_MODEL", "moondream")
                 
                 response = requests.post(
                     f"{ollama_host}/api/generate",

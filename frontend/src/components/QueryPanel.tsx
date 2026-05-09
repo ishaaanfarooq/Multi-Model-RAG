@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import ImageViewer from "@/components/ImageViewer";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -58,6 +59,9 @@ export default function QueryPanel() {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  
+  // Viewport/ImageViewer state
+  const [viewerImage, setViewerImage] = useState<{ src: string, alt: string } | null>(null);
   
   useEffect(() => {
     setHasMounted(true);
@@ -412,8 +416,14 @@ export default function QueryPanel() {
                 
                 {/* User image preview */}
                 {msg.role === "user" && msg.image && (
-                  <div className="mb-3 rounded-xl overflow-hidden border border-white/20 max-w-[200px]">
-                    <img src={msg.image} alt="Uploaded" className="w-full h-auto" />
+                  <div 
+                    className="mb-3 rounded-xl overflow-hidden border border-white/20 max-w-[200px] cursor-pointer group/img relative"
+                    onClick={() => setViewerImage({ src: msg.image!, alt: "Uploaded image" })}
+                  >
+                    <img src={msg.image} alt="Uploaded" className="w-full h-auto group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                       <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">View Full size</span>
+                    </div>
                   </div>
                 )}
 
@@ -431,18 +441,23 @@ export default function QueryPanel() {
                     <img 
                       src={msg.chart.startsWith('http') ? msg.chart : `${API_BASE}${msg.chart}`} 
                       alt="Analytical Chart"
-                      className="w-full h-auto rounded-xl shadow-sm border border-amber-100 group-hover/chart:scale-[1.01] transition-transform duration-500"
+                      className="w-full h-auto rounded-xl shadow-sm border border-amber-100 group-hover/chart:scale-[1.01] transition-transform duration-500 cursor-pointer"
+                      onClick={() => setViewerImage({ 
+                        src: msg.chart!.startsWith('http') ? msg.chart! : `${API_BASE}${msg.chart}`, 
+                        alt: "Analytical Chart" 
+                      })}
                     />
                     <div className="mt-3 flex items-center justify-between">
                       <span className="text-[9px] font-bold text-[#71717A] uppercase tracking-tighter italic">Auto-Generated Data Visualization</span>
-                      <a 
-                        href={msg.chart.startsWith('http') ? msg.chart : `${API_BASE}${msg.chart}`} 
-                        target="_blank" 
-                        rel="noreferrer"
+                      <button 
+                        onClick={() => setViewerImage({ 
+                          src: msg.chart!.startsWith('http') ? msg.chart! : `${API_BASE}${msg.chart}`, 
+                          alt: "Analytical Chart" 
+                        })}
                         className="text-[10px] font-bold text-[#B45309] hover:underline"
                       >
                         View High Resolution →
-                      </a>
+                      </button>
                     </div>
                   </div>
                 )}
@@ -588,6 +603,14 @@ export default function QueryPanel() {
           </p>
         </div>
       </div>
+      {/* Image Viewer Modal */}
+      {viewerImage && (
+        <ImageViewer 
+          src={viewerImage.src} 
+          alt={viewerImage.alt} 
+          onClose={() => setViewerImage(null)} 
+        />
+      )}
     </div>
   );
 }

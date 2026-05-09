@@ -1,4 +1,4 @@
-// Root layout for the Multi-Model RAG frontend application - v1.4.0-stable
+// Root layout for the Multi-Model RAG frontend application - v1.4.1-stable
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
@@ -26,11 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${outfit.variable} font-sans bg-[var(--color-background)] text-[var(--color-foreground)] antialiased`}>
         {children}
       </body>

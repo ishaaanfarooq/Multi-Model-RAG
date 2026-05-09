@@ -1,4 +1,4 @@
-// Root layout for the Multi-Model RAG frontend application - v1.4.1-stable
+// Root layout for the Multi-Model RAG frontend application - v1.4.2-stable
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";

@@ -62,23 +62,26 @@ class ImageAnalyzer:
                 import requests
                 ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
                 
+                # Use the quantized model that fits in limited VRAM (4GB)
+                vision_model = os.getenv("OLLAMA_VISION_MODEL", "llava:7b-v1.5-q4_0")
+                
                 response = requests.post(
                     f"{ollama_host}/api/generate",
                     json={
-                        "model": "llava",
+                        "model": vision_model,
                         "prompt": self._build_prompt(query),
                         "images": [image_b64],
                         "stream": False,
                     },
-                    timeout=60,
+                    timeout=180,  # Vision models need more time, especially on first load
                 )
                 
                 if response.status_code == 200:
                     result = response.json().get("response", "")
-                    logger.info("ImageAnalyzer: Successfully analyzed image with Ollama LLaVA.")
+                    logger.info(f"ImageAnalyzer: Successfully analyzed image with Ollama ({vision_model}).")
                     return result
                 else:
-                    logger.warning(f"Ollama LLaVA returned status {response.status_code}")
+                    logger.warning(f"Ollama {vision_model} returned status {response.status_code}")
             except Exception as e:
                 logger.warning(f"Ollama LLaVA failed: {e}")
 

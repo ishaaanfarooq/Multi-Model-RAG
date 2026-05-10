@@ -113,7 +113,7 @@ export default function CrawlPanel() {
                          value={url}
                          onChange={(e) => setUrl(e.target.value)}
                          placeholder="Enter target URL (e.g., https://example.com)"
-                         className="input-warm pl-12 bg-[#FCFBFA] py-4"
+                         className="input-warm !pl-16 bg-[#FCFBFA] py-4"
                          disabled={isCrawling}
                       />
                    </div>

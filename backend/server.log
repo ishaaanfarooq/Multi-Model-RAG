@@ -1,0 +1,5 @@
+2026-05-10 14:15:52 | INFO     | utils.logger_config | Logging configured successfully.
+INFO:     Started server process [111646]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)

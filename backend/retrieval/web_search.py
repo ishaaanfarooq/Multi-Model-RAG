@@ -13,6 +13,30 @@ HEADERS = {
 }
 
 
+def _extract_structured_text(soup: BeautifulSoup) -> str:
+    """Extract text while preserving table structure as Markdown."""
+    # Process tables first
+    for table in soup.find_all("table"):
+        markdown_table = []
+        for row in table.find_all("tr"):
+            cells = [cell.get_text(strip=True) for cell in row.find_all(["th", "td"])]
+            if cells:
+                markdown_table.append("| " + " | ".join(cells) + " |")
+        
+        # Replace table with its markdown string
+        if markdown_table:
+            table_text = "\n" + "\n".join(markdown_table) + "\n"
+            table.replace_with(table_text)
+
+    # Remove noise
+    for element in soup(["script", "style", "nav", "footer", "header", "aside"]):
+        element.decompose()
+
+    text = soup.get_text(separator="\n", strip=True)
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    return "\n".join(lines)
+
+
 def _search_duckduckgo(query: str, max_results: int = 5) -> list[dict]:
     """Try DuckDuckGo HTML search (no API key, scrapes HTML endpoint)."""
     results = []
@@ -122,12 +146,25 @@ def _search_google_news_rss(query: str, max_results: int = 4) -> list[dict]:
     return results
 
 
+async def _fetch_and_extract(url: str) -> str:
+    """Fetch a page and extract structured text."""
+    try:
+        resp = await asyncio.to_thread(requests.get, url, headers=HEADERS, timeout=10)
+        if resp.status_code == 200 and "text/html" in resp.headers.get("Content-Type", ""):
+            soup = BeautifulSoup(resp.text, "html.parser")
+            return _extract_structured_text(soup)
+    except Exception as e:
+        logger.debug(f"Failed to fetch {url}: {e}")
+    return ""
+
+
 async def search_web(query: str, max_results: int = 5) -> tuple[list[str], list[str]]:
     """
     Tries DuckDuckGo HTML → Wikipedia REST API → Google News RSS.
+    Visits the top links to extract full structured content (tables preserved).
     Returns (doc_texts, sources).
     """
-    # Try DDG HTML (not the API, which is rate-limited)
+    # Try DDG HTML first
     results = await asyncio.to_thread(_search_duckduckgo, query, max_results)
     source_label = "DuckDuckGo"
 
@@ -145,7 +182,24 @@ async def search_web(query: str, max_results: int = 5) -> tuple[list[str], list[
         logger.error("All web search sources exhausted — no results found.")
         return [], []
 
-    doc_texts = [r.get("body", "") for r in results if r.get("body")]
-    sources   = [r.get("href", "") for r in results if r.get("href")]
-    logger.info(f"Web search ({source_label}) → {len(doc_texts)} results for: {query}")
-    return doc_texts, sources
+    # Visit top 3 results to get FULL content (important for tables/fees)
+    full_docs = []
+    final_sources = []
+    
+    # We take top 3 for full crawl to balance speed and depth
+    top_results = results[:3]
+    
+    tasks = [_fetch_and_extract(r["href"]) for r in top_results]
+    extracted_texts = await asyncio.gather(*tasks)
+
+    for i, text in enumerate(extracted_texts):
+        if text and len(text) > 200:
+            full_docs.append(text[:5000]) # Cap at 5k chars per doc
+            final_sources.append(top_results[i]["href"])
+        else:
+            # Fallback to snippet if fetch failed or content was too short
+            full_docs.append(top_results[i]["body"])
+            final_sources.append(top_results[i]["href"])
+
+    logger.info(f"Web search ({source_label}) → {len(full_docs)} results for: {query}")
+    return full_docs, final_sources

@@ -60,8 +60,20 @@ class WebCrawler:
             return False
 
     def _extract_text(self, soup: BeautifulSoup) -> str:
-        """Extract clean, visible text from a BeautifulSoup parsed page."""
-        # Remove script, style, nav, footer, header elements
+        """Extract clean, visible text while preserving table structure as Markdown."""
+        # Process tables first
+        for table in soup.find_all("table"):
+            markdown_table = []
+            for row in table.find_all("tr"):
+                cells = [cell.get_text(strip=True) for cell in row.find_all(["th", "td"])]
+                if cells:
+                    markdown_table.append("| " + " | ".join(cells) + " |")
+            
+            if markdown_table:
+                table_text = "\n" + "\n".join(markdown_table) + "\n"
+                table.replace_with(table_text)
+
+        # Remove noise
         for element in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
             element.decompose()
 
@@ -72,8 +84,11 @@ class WebCrawler:
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         text = "\n".join(lines)
         
-        # Remove lines that are too short to be meaningful content (e.g. Nav elements)
-        meaningful_lines = [line for line in text.split("\n") if len(line) > 15 or line.endswith((".", "!", "?", ":", ","))]
+        # Filter lines, but PRESERVE table rows (they start with |)
+        meaningful_lines = []
+        for line in text.split("\n"):
+            if line.startswith("|") or len(line) > 15 or line.endswith((".", "!", "?", ":", ",")):
+                meaningful_lines.append(line)
         
         return "\n".join(meaningful_lines)
 

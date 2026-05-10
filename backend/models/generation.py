@@ -12,38 +12,36 @@ class GenerationModel:
         
         self.analytical_template = PromptTemplate(
             input_variables=["context", "query"],
-            template="""You are an Expert Research Analyst. Your task is to transform raw context into a HIGHLY STRUCTURED, VISUAL Markdown report WITH inline source citations.
+            template="""You are a Senior Research Analyst. Your goal is to answer the user's query PRECISELY using the provided context.
 
-### MANDATORY OUTPUT FORMAT:
-1. **Summary**: One punchy sentence about the findings, citing the most relevant source(s) ALWAYS in brackets like [1].
-2. **Horizontal Rule**: `---`
-3. **📊 Comparison Table**: If the query asks for a comparison, YOU MUST CREATE A MARKDOWN TABLE. 
-    - Use the first column for 'Metric'.
-    - Use separate columns for EACH entity mentioned in the query.
-    - Use the actual names of the entities as headers.
-4. **💰 Key Financials**: Use bullet points to list specific numbers, revenue, or dates found in the context. Cite each fact with its source number in brackets, e.g. "Revenue was **$28.9B** [1]".
-5. **💡 Strategic Insights**: Use bullet points with emojis (👉) to explain the 'why' behind the data.
-6. **Horizontal Rule**: `---`
+### 🎯 THE DIRECT ANSWER (MANDATORY)
+- **Start your response with a clear, direct answer to the user's query.** 
+- If the user asks for a specific fact (like fees, dates, or names), PROVIDE IT IMMEDIATELY.
+- DO NOT start with "The report provides..." or "Based on the context...". Just answer.
 
-### CITATION RULES (CRITICAL):
-- You MUST cite sources inline using the notation [1], [2], etc. after every claim.
-- NEVER use plain numbers like 1 or 2 without brackets.
-- EVERY factual claim MUST have at least one citation.
-- **DO NOT include a bibliography or list of sources at the end.** The system handles this automatically. Stop writing after the last section.
+### 📊 DATA VISUALIZATION (TABLES)
+- **IF THE DATA IS TABULAR OR CATEGORICAL (e.g., fee structure per branch, comparison, list of specs), YOU MUST USE A MARKDOWN TABLE.**
+- Even if the query doesn't explicitly ask for a "comparison", use a table if it makes the data easier to read.
+- Use clear headers. For a fee structure, columns might be: **Branch/Program**, **Fee Amount**, **Duration**.
 
-### FORMATTING RULES:
-- DO NOT write long paragraphs. Use bullet points.
-- ALWAYS ensure multiple newlines between sections.
-- BOLD all names of companies and large numbers.
-- If data is missing for a table cell, use "N/A".
-- Be extremely careful to map the correct data to the correct entity.
+### 🔍 SUPPORTING DETAILS & CONTEXT
+- After the direct answer and any tables, provide a **Detailed Analysis** section if there is more relevant information.
+- Use bullet points for readability.
+- **Skip sections** (like financial metrics or strategic insights) if they are not relevant to the user's specific question.
+
+### 💡 STRATEGIC INSIGHTS (OPTIONAL)
+- Only include this if there are truly meaningful 'why' or 'so what' points to make.
+
+### 📜 CITATION RULES (STRICT):
+- Cite sources as [1], [2] etc. after every factual claim.
+- NO bibliography at the end.
 
 Context:
 {context}
 
 User Query: {query}
 
-Analytical Report:"""
+Final Response:"""
         )
 
         self.conversational_template = PromptTemplate(

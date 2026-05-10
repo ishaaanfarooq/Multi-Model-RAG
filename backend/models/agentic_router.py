@@ -21,13 +21,9 @@ class AgentRouter:
             template='''You are an intelligent autonomous Agent Router. Your job is to classify the user's query into EXACTLY ONE of the following three Tool categories:
 
 1. "Search_Knowledge_Base": Choose this ONLY if the user explicitly asks about uploaded/ingested private documents, a specific website they crawled, or content that clearly came from their personal knowledge base.
-2. "Web_Search": Choose this if the user is asking for ANY of the following:
-   - Live or real-time information (news, weather, stock prices)
-   - Facts about public companies, people, events, or places (e.g. revenue, market cap, product specs)
-   - Statistical data, rankings, or financial figures
-   - Anything a search engine would normally answer
-   - Questions about history, science, sports, politics, or general world knowledge
-3. "Direct_Chat": Choose this ONLY if the user is greeting you, making small talk ("How are you?", "Thanks"), or asking a generic conversational question that needs no external data.
+2. "Web_Search": Choose this if the user is asking for live or real-time information, facts about public entities, or general world knowledge that a search engine would answer.
+3. "Vision_Analysis": Choose this if the user is asking about an image, a picture, a screenshot, or specifically mentions "the image", "what's in the photo", or "read this text" (referring to an uploaded file).
+4. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
 
 User Query: "{query}"
 
@@ -47,6 +43,8 @@ Tool Selection:'''
             # Clean up response in case LLM gets chatty
             if "Web_Search" in response:
                 return "Web_Search"
+            elif "Vision_Analysis" in response:
+                return "Vision_Analysis"
             elif "Search_Knowledge_Base" in response:
                 return "Search_Knowledge_Base"
             elif "Direct_Chat" in response:

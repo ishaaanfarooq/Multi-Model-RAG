@@ -26,6 +26,7 @@ class MasterOrchestrator:
         self.verifier = VerificationModule()
         self.visualizer = VisualizerAgent()
         self.notebook = NotebookMemory()
+        self.last_image_context = "" # Persist last analyzed image context
         
     async def process_query_stream(self, query: str, history: str = "", image_context: str = "") -> AsyncGenerator[str, None]:
         """
@@ -43,7 +44,14 @@ class MasterOrchestrator:
         search_query = query
         if history:
             yield emit("Master LLM Orchestrator", "Processing", "Rewriting query using conversational context...")
-            rewrite_prompt = f"Given the conversation history: '{history}', rewrite the following question to be completely self-contained with no pronouns. Return ONLY the rewritten question string. Question: '{query}'"
+            rewrite_prompt = f"""Given the conversation history: '{history}', rewrite the following user question to be completely self-contained. 
+RULES:
+1. If the new question is a different topic than the history, DO NOT merge them. Just fix pronouns.
+2. Ensure the core entity (e.g. college name, person name) is explicitly mentioned.
+3. Return ONLY the rewritten question string.
+
+New Question: '{query}'
+Rewritten:"""
             search_query = self.generator.llm.invoke(rewrite_prompt).strip()
             yield emit("Master LLM Orchestrator", "Completed", f"Contextualized query: {search_query}")
         else:
@@ -52,15 +60,37 @@ class MasterOrchestrator:
         # 1.25 Image-Aware Routing
         # When an image is uploaded, check if the query is primarily about the image.
         # If so, bypass the KB/Web search and answer directly from the image analysis.
+        
+        # Update or reuse image context
+        if image_context:
+            self.last_image_context = image_context
+        elif not image_context and self.last_image_context:
+            # Check if this query refers to the previous image
+            image_ref_keywords = ["this", "that", "the", "it", "photo", "image", "picture", "screenshot"]
+            if any(kw in query.lower() for kw in image_ref_keywords):
+                logger.info("Reusing previous image context for follow-up query.")
+                image_context = self.last_image_context
+
         if image_context:
             image_keywords = ["photo", "image", "picture", "screenshot", "uploaded", "this",
                               "describe", "written", "show", "see", "look", "what is", "what's",
-                              "tell me about", "analyze", "read", "content", "says", "text in"]
-            query_lower = search_query.lower()
-            is_image_centric = any(kw in query_lower for kw in image_keywords)
+                              "tell me about", "analyze", "read", "content", "says", "text in",
+                              "summarize this", "explain this", "extract", "info in"]
+            
+            # Check keywords in both original and rewritten queries to avoid context loss during rewriting
+            query_lower = query.lower()
+            search_query_lower = search_query.lower()
+            
+            is_image_centric = any(kw in query_lower for kw in image_keywords) or \
+                               any(kw in search_query_lower for kw in image_keywords)
+            
+            logger.info(f"Image detection: is_image_centric={is_image_centric}, original='{query}', rewritten='{search_query}'")
+            if image_context and len(image_context) < 50:
+                logger.warning(f"Extremely short image context: '{image_context}'")
 
             if is_image_centric:
                 yield emit("Image-Aware Router", "Processing", "Query is about the uploaded image — answering from visual analysis")
+                logger.info("Routing to Image-Centric generation path.")
 
                 # Generate answer directly from image context only
                 yield emit("Generation", "Processing", "Synthesizing answer from image analysis data")
@@ -92,8 +122,9 @@ class MasterOrchestrator:
             else:
                 # Image is supplementary — enrich the search query with visual data
                 yield emit("Image-Aware Router", "Processing", "Image detected as supplementary context — enriching search query")
-                # Take the first 300 chars of image analysis to augment the search
-                image_summary = image_context[:300].replace("\n", " ")
+                logger.info("Routing to supplementary image context path.")
+                # Take the first 500 chars of image analysis to augment the search
+                image_summary = image_context[:500].replace("\n", " ")
                 search_query = f"{search_query}. Visual context: {image_summary}"
                 yield emit("Image-Aware Router", "Completed", "Search query enriched with image analysis data")
 
@@ -109,6 +140,27 @@ class MasterOrchestrator:
             logger.error(f"Agent Router exception: {e}")
             yield emit("Agent Router", "Completed", f"Fallback to Default Tool: [{tool}] (Error: {str(e)[:60]})")
 
+
+        # ─── VISION ANALYSIS branch ───────────────────────────────────────────
+        if tool == "Vision_Analysis":
+            if image_context:
+                yield emit("Vision Analysis", "Processing", "Analyzing query against visual content")
+                answer = await self.generator.generate_answer(
+                    search_query,
+                    [f"[Image Analysis]:\n{image_context}"],
+                    sources=["Uploaded Image"],
+                    mode="analytical"
+                )
+                yield emit("Vision Analysis", "Completed", "Answer generated from visual data")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": answer, 
+                    "sources": ["Uploaded Image"],
+                    "source_map": {"1": "Uploaded Image"}
+                })
+                return
+            else:
+                yield emit("Vision Analysis", "Completed", "No image provided for visual analysis — falling back to Web Search")
+                tool = "Web_Search"
 
         # ─── DIRECT CHAT branch ────────────────────────────────────────────
         if tool == "Direct_Chat":
@@ -126,24 +178,21 @@ class MasterOrchestrator:
 
         # ─── WEB SEARCH branch ────────────────────────────────────────────
         elif tool == "Web_Search":
-            yield emit("Web Search", "Processing", f"Searching the live internet for: {search_query}")
+            yield emit("Web Search", "Processing", f"Initiating multi-path research for: {search_query}")
             try:
-                # ─── Query Decomposition (NEW) ───
-                # If the query is complex, break it down for better coverage
-                queries = [search_query]
-                if any(x in search_query.lower() for x in ["compare", "difference", "versus", "vs", "and", ","]):
-                    yield emit("Agent Router", "Processing", "Decomposing complex query into focused sub-queries...")
-                    decomposition_prompt = f"Decompose this complex query into 3 short, specific search queries to get balanced results for all entities mentioned: '{search_query}'. Return ONLY a JSON list of strings."
-                    try:
-                        decomp_raw = self.generator.llm.invoke(decomposition_prompt).strip()
-                        # Clean up possible markdown
-                        decomp_json = re.sub(r'```json\s*|\s*```', '', decomp_raw)
-                        queries = json.loads(decomp_json)
-                        yield emit("Agent Router", "Completed", f"Expanded to {len(queries)} research paths")
-                    except:
-                        logger.warning("Query decomposition failed, using original query.")
+                # ─── Multi-Query Generation ───
+                # Generate variations to improve coverage
+                expansion_prompt = f"Generate 3 diverse search queries to thoroughly answer this request: '{search_query}'. Return ONLY a JSON list of strings."
+                try:
+                    exp_raw = self.generator.llm.invoke(expansion_prompt).strip()
+                    exp_json = re.sub(r'```json\s*|\s*```', '', exp_raw)
+                    queries = json.loads(exp_json)
+                    yield emit("Agent Router", "Completed", f"Expanded to {len(queries)} research paths")
+                except:
+                    logger.warning("Query expansion failed, using original query.")
+                    queries = [search_query]
                 
-                # Perform searches (could be parallelized for speed)
+                # Perform searches in parallel if possible, but sequential is safer for rate limits
                 all_docs = []
                 all_sources = []
                 for q in queries:
@@ -158,8 +207,7 @@ class MasterOrchestrator:
                     yield emit("Web Search", "Completed", f"Retrieved {len(doc_texts)} live web results across all paths")
                 else:
                     yield emit("Web Search", "Completed", "No web results found — falling back to Knowledge Base")
-                    tool = "Search_Knowledge_Base"   # fall-through below
-
+                    tool = "Search_Knowledge_Base"
             except Exception as e:
                 logger.error(f"Web search failed: {e}")
                 yield emit("Web Search", "Completed", f"Web search failed ({str(e)[:80]}) — falling back to Knowledge Base")

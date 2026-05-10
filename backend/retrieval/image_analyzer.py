@@ -57,55 +57,55 @@ class ImageAnalyzer:
                 except Exception as e:
                     logger.warning(f"Gemini Vision failed, trying Ollama LLaVA: {e}")
 
-            # Fallback: Try Ollama with LLaVA (vision model)
-            try:
-                import requests
-                ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-                
-                # Use the tiny moondream model that comfortably fits in 4GB VRAM
-                vision_model = os.getenv("OLLAMA_VISION_MODEL", "moondream")
-                
-                response = requests.post(
-                    f"{ollama_host}/api/generate",
-                    json={
-                        "model": vision_model,
-                        "prompt": self._build_prompt(query),
-                        "images": [image_b64],
-                        "stream": False,
-                    },
-                    timeout=180,  # Vision models need more time, especially on first load
-                )
-                
-                if response.status_code == 200:
-                    result = response.json().get("response", "")
-                    logger.info(f"ImageAnalyzer: Successfully analyzed image with Ollama ({vision_model}).")
-                    return result
-                else:
-                    logger.warning(f"Ollama {vision_model} returned status {response.status_code}")
-            except Exception as e:
-                logger.warning(f"Ollama LLaVA failed: {e}")
+            # Try a list of vision models available in Ollama
+            models_to_try = [
+                os.getenv("OLLAMA_VISION_MODEL", "llava"),
+                "moondream",
+                "llava:7b-v1.5-q4_0"
+            ]
+            
+            last_error = None
+            import requests
+            ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+
+            for model in models_to_try:
+                try:
+                    logger.info(f"ImageAnalyzer: Attempting analysis with model '{model}'...")
+                    response = requests.post(
+                        f"{ollama_host}/api/generate",
+                        json={
+                            "model": model,
+                            "prompt": self._build_prompt(query),
+                            "images": [image_b64],
+                            "stream": False,
+                        },
+                        timeout=120,
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json().get("response", "").strip()
+                        if result:
+                            logger.info(f"ImageAnalyzer: Successfully analyzed image with '{model}'. Length: {len(result)}")
+                            return result
+                        else:
+                            logger.warning(f"ImageAnalyzer: Model '{model}' returned an empty response. Trying next...")
+                    else:
+                        logger.warning(f"ImageAnalyzer: Model '{model}' returned status {response.status_code}")
+                except Exception as e:
+                    logger.warning(f"ImageAnalyzer: Call to '{model}' failed: {e}")
+                    last_error = e
 
             # Final fallback: just describe that an image was uploaded
-            logger.warning("ImageAnalyzer: No vision model available. Returning basic description.")
-            return f"[An image was uploaded by the user. No vision model is available to analyze it. The user's query about this image was: '{query}']"
+            logger.warning("ImageAnalyzer: No vision model available or all failed. Returning basic description.")
+            return f"[Vision Analysis Failed] All local models (LLaVA/Moondream) failed to analyze this image. User query: '{query}'. Please check Ollama logs for details."
 
         except Exception as e:
             logger.error(f"ImageAnalyzer failed: {e}")
             return f"[Image analysis failed: {str(e)}]"
 
     def _build_prompt(self, query: str = "") -> str:
-        """Build the analysis prompt for the vision model."""
-        base = """Analyze this image in detail. Extract ALL of the following:
-
-1. **Text Content**: Any text, labels, numbers, titles visible in the image.
-2. **Data Points**: Any numerical data, statistics, percentages, or measurements.
-3. **Visual Structure**: Describe charts, tables, diagrams, or graphs if present. Include axis labels, legends, and data values.
-4. **Key Entities**: Names of companies, people, products, or locations mentioned.
-5. **Summary**: A concise 2-sentence summary of what this image shows.
-
-Be extremely precise with numbers and text. Do not hallucinate data that isn't visible."""
-        
+        """Build a focused analysis prompt for the vision model."""
         if query:
-            base += f"\n\nThe user specifically wants to know: {query}"
+            return f"Answer this question about the image: {query}. Describe all relevant details, text, and data points precisely."
         
-        return base
+        return "Describe this image in detail. Extract any visible text, numerical data, and summarize the main subject."

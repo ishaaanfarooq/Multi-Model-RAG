@@ -1,0 +1,23 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.0.3
+   - Local:        http://localhost:3000
+
+ ✓ Starting...
+ ✓ Ready in 6.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 10.6s (1125 modules)
+ GET / 200 in 12547ms
+ ✓ Compiled in 2.2s (546 modules)
+ GET / 200 in 145ms
+ ○ Compiling /favicon.ico ...
+ ✓ Compiled /favicon.ico in 606ms (594 modules)
+ GET /favicon.ico 200 in 733ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1035ms (1114 modules)
+ GET / 404 in 1419ms
+ GET /_next/static/css/app/layout.css?v=1778403256303 404 in 143ms
+ GET /_next/static/chunks/main-app.js?v=1778403256303 404 in 205ms
+ GET /_next/static/chunks/app-pages-internals.js 404 in 191ms

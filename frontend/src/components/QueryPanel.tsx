@@ -153,6 +153,14 @@ export default function QueryPanel() {
     }
   };
 
+  const formatHistory = () => {
+    return messages
+      .filter(m => m.role !== 'system')
+      .slice(-6) // Include last 3 turns
+      .map(m => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+      .join('\n');
+  };
+
   // ─── Send Logic (supports text-only and text+image) ──────────────
   const handleSend = useCallback(() => {
     const query = input.trim();
@@ -175,6 +183,7 @@ export default function QueryPanel() {
     if (selectedImage) {
       const formData = new FormData();
       formData.append("query", query);
+      formData.append("history", formatHistory());
       formData.append("image", selectedImage);
 
       // For POST+SSE we need to use fetch + ReadableStream
@@ -222,7 +231,7 @@ export default function QueryPanel() {
     } else {
       // Text-only: use EventSource (GET)
       const eventSource = new EventSource(
-        `${API_BASE}/api/stream?query=${encodeURIComponent(query)}`
+        `${API_BASE}/api/stream?query=${encodeURIComponent(query)}&history=${encodeURIComponent(formatHistory())}`
       );
 
       eventSource.onmessage = (event) => {
@@ -250,7 +259,7 @@ export default function QueryPanel() {
         eventSource.close();
       };
     }
-  }, [input, isProcessing, selectedImage, imagePreview]);
+  }, [input, isProcessing, selectedImage, imagePreview, messages]);
 
   // Shared SSE data handler — returns true if it's the final response
   const handleSSEData = (data: any): boolean => {

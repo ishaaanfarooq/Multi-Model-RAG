@@ -43,12 +43,18 @@ class MasterOrchestrator:
         
         search_query = query
         if history:
-            yield emit("Master LLM Orchestrator", "Processing", "Rewriting query using conversational context...")
+            vision_hint = ""
+            if self.last_image_context:
+                vision_hint = "NOTE: An image was previously uploaded and analyzed. If the user refers to 'it', 'this', 'the photo', or 'the image', they are talking about that visual content. DO NOT inject outside topics (like previous search results) into the rewritten question if the user is focused on the image."
+
             rewrite_prompt = f"""Given the conversation history: '{history}', rewrite the following user question to be completely self-contained. 
+{vision_hint}
+
 RULES:
 1. If the new question is a different topic than the history, DO NOT merge them. Just fix pronouns.
 2. Ensure the core entity (e.g. college name, person name) is explicitly mentioned.
-3. Return ONLY the rewritten question string.
+3. If the user mentions 'it' or 'this' in a way that refers to an image, replace it with 'the uploaded image'.
+4. Return ONLY the rewritten question string.
 
 New Question: '{query}'
 Rewritten:"""
@@ -72,10 +78,10 @@ Rewritten:"""
                 image_context = self.last_image_context
 
         if image_context:
-            image_keywords = ["photo", "image", "picture", "screenshot", "uploaded", "this",
+            image_keywords = ["photo", "image", "picture", "screenshot", "uploaded", "this", "that", "it",
                               "describe", "written", "show", "see", "look", "what is", "what's",
-                              "tell me about", "analyze", "read", "content", "says", "text in",
-                              "summarize this", "explain this", "extract", "info in"]
+                              "tell me", "analyze", "read", "content", "says", "text in",
+                              "summarize", "explain", "extract", "info in", "detail"]
             
             # Check keywords in both original and rewritten queries to avoid context loss during rewriting
             query_lower = query.lower()

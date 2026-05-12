@@ -36,4 +36,5 @@ class DocumentParser:
             # For simplicity, returning the raw pages as chunks for now
             return documents
         finally:
-            os.remove(temp_file_path)
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)

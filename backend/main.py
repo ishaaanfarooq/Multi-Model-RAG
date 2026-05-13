@@ -27,7 +27,11 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Multi-Model RAG API"}
+    return {"message": "Welcome to the Multi-Model RAG API", "status": "running"}
+
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "version": "1.0.0"}
     
 if __name__ == "__main__":
     import uvicorn

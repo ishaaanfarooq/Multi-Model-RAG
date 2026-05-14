@@ -105,7 +105,13 @@ class ImageAnalyzer:
 
     def _build_prompt(self, query: str = "") -> str:
         """Build a focused analysis prompt for the vision model."""
-        if query:
-            return f"Answer this question about the image: {query}. Describe all relevant details, text, and data points precisely."
+        base_instruction = (
+            "Analyze the image and provide a comprehensive description. "
+            "IMPORTANT: If you see any tables, charts, or structured data, extract them exactly "
+            "as they appear. Use Markdown formatting for tables. Extract all visible text accurately."
+        )
         
-        return "Describe this image in detail. Extract any visible text, numerical data, and summarize the main subject."
+        if query:
+            return f"{base_instruction}\n\nUser Question: {query}\n\nAnswer the user's question precisely using the visual information provided."
+        
+        return f"{base_instruction}\n\nDescribe the main subject and extract all data points."

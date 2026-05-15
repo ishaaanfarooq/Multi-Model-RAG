@@ -192,6 +192,6 @@ Distributed under the [MIT License](LICENSE). See LICENSE file for details.
 
 **[⬆ Back to Top](#multi-model-rag-system-)**
 
-Made with ❤️ by [ishaaanfarooq](https://github.com/ishaaanfarooq)
+Made with ❤️ and ✨ by [ishaaanfarooq](https://github.com/ishaaanfarooq)
 
 </div>

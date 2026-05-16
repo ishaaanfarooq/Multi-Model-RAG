@@ -14,9 +14,10 @@ class VisualizerAgent:
     Matplotlib charts to visualize the information.
     Prioritizes Gemini for sophisticated data extraction and code generation.
     """
-    def __init__(self, model_name: str = "llama3.2", output_dir: str = "uploads"):
+    def __init__(self, model_name: str = "llama3.2", output_dir: str = "uploads", persona_memory=None):
         self.llm = DualLLM(llama_model=model_name)
         self.output_dir = output_dir
+        self.persona_memory = persona_memory
         
         # Ensure output directory exists
         if not os.path.exists(self.output_dir):
@@ -43,8 +44,11 @@ Response:"""
         )
 
         self.code_prompt = PromptTemplate(
-            input_variables=["context", "answer", "output_path"],
+            input_variables=["context", "answer", "output_path", "persona"],
             template="""You are a Lead Data Scientist. Write a Python script using Matplotlib to create a professional high-fidelity chart based on the data in the context/answer.
+
+### 🎭 USER PERSONA & PREFERENCES
+{persona}
 
 REQUIREMENTS:
 1. IMPORTS: `import matplotlib.pyplot as plt`, `import numpy as np`.
@@ -76,10 +80,15 @@ Python Code:"""
         filename = f"chart_{uuid.uuid4().hex[:8]}.png"
         output_path = os.path.join(self.output_dir, filename)
         
+        persona_str = ""
+        if self.persona_memory:
+            persona_str = self.persona_memory.get_persona_context("Visualizer")
+        
         code_response = self.llm.invoke(self.code_prompt.format(
             context=full_context, 
             answer=answer, 
-            output_path=output_path
+            output_path=output_path,
+            persona=persona_str
         ))
         
         # Clean up code (sometimes LLMs include ```python blocks despite instructions)

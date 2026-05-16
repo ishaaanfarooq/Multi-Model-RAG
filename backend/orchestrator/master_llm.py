@@ -11,6 +11,7 @@ from verification.verifier import VerificationModule
 from retrieval.visualizer import VisualizerAgent
 from retrieval.web_search import search_web
 from core.memory_manager import NotebookMemory
+from core.persona_memory import AgentPersonaMemory
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +23,10 @@ class MasterOrchestrator:
     def __init__(self):
         self.vector_db = VectorDatabase()
         self.reranker = RerankerModel()
-        self.generator = GenerationModel()
+        self.persona_memory = AgentPersonaMemory()
+        self.generator = GenerationModel(persona_memory=self.persona_memory)
         self.verifier = VerificationModule()
-        self.visualizer = VisualizerAgent()
+        self.visualizer = VisualizerAgent(persona_memory=self.persona_memory)
         self.notebook = NotebookMemory()
         self.last_image_context = "" # Persist last analyzed image context
         
@@ -54,11 +56,36 @@ RULES:
 1. If the new question is a different topic than the history, DO NOT merge them. Just fix pronouns.
 2. Ensure the core entity (e.g. college name, person name) is explicitly mentioned.
 3. If the user mentions 'it' or 'this' in a way that refers to an image, replace it with 'the uploaded image'.
-4. Return ONLY the rewritten question string.
+4. If the user is stating a persistent PREFERENCE or INSTRUCTION for how the AI should behave (e.g. "always use bar charts", "write in Spanish", "keep answers short"), output it inside XML tags. Use <PREFERENCE_VISUALIZER> for chart/visual preferences, and <PREFERENCE_GENERATOR> for text/writing preferences. Example: <PREFERENCE_GENERATOR>Always use bullet points</PREFERENCE_GENERATOR>
+5. If it's a normal query, return ONLY the rewritten question string.
 
 New Question: '{query}'
 Rewritten:"""
             search_query = self.generator.llm.invoke(rewrite_prompt).strip()
+            
+            # Check for preferences
+            if "<PREFERENCE_" in search_query:
+                vis_match = re.search(r'<PREFERENCE_VISUALIZER>(.*?)</PREFERENCE_VISUALIZER>', search_query, re.IGNORECASE | re.DOTALL)
+                gen_match = re.search(r'<PREFERENCE_GENERATOR>(.*?)</PREFERENCE_GENERATOR>', search_query, re.IGNORECASE | re.DOTALL)
+                
+                if vis_match:
+                    pref = vis_match.group(1).strip()
+                    self.persona_memory.add_preference("Visualizer", pref)
+                    yield emit("Master LLM Orchestrator", "Completed", f"Updated Visualizer Persona: '{pref}'")
+                if gen_match:
+                    pref = gen_match.group(1).strip()
+                    self.persona_memory.add_preference("Generator", pref)
+                    yield emit("Master LLM Orchestrator", "Completed", f"Updated Generator Persona: '{pref}'")
+                
+                clean_query = re.sub(r'<PREFERENCE_.*?>.*?</PREFERENCE_.*?>', '', search_query, flags=re.IGNORECASE | re.DOTALL).strip()
+                if not clean_query:
+                    yield emit("Final Response", "Completed", "Done", {
+                        "answer": "I have updated my persona memory and will remember this preference for future interactions!",
+                        "sources": []
+                    })
+                    return
+                search_query = clean_query
+
             yield emit("Master LLM Orchestrator", "Completed", f"Contextualized query: {search_query}")
         else:
             yield emit("Master LLM Orchestrator", "Completed", "Delegating task to Agent Router")

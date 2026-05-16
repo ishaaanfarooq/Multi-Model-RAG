@@ -7,11 +7,12 @@ class GenerationModel:
     Prioritizes Gemini with a local Llama fallback.
     Supports inline source citations [1], [2] etc.
     """
-    def __init__(self, model_name: str = "llama3.2"):
+    def __init__(self, model_name: str = "llama3.2", persona_memory=None):
         self.llm = DualLLM(llama_model=model_name)
+        self.persona_memory = persona_memory
         
         self.analytical_template = PromptTemplate(
-            input_variables=["context", "query"],
+            input_variables=["context", "query", "persona"],
             template="""You are a Senior Research Analyst. Your goal is to answer the user's query PRECISELY using the provided context.
 
 ### 🧠 REASONING & VERIFICATION
@@ -38,6 +39,9 @@ class GenerationModel:
 - Cite sources as [1], [2] etc. after every factual claim.
 - NO bibliography at the end.
 
+### 🎭 USER PERSONA & PREFERENCES
+{persona}
+
 Context:
 {context}
 
@@ -47,9 +51,12 @@ Final Response:"""
         )
 
         self.conversational_template = PromptTemplate(
-            input_variables=["query"],
+            input_variables=["query", "persona"],
             template="""You are a helpful, friendly AI assistant. Answer the user's query directly and concisely. 
 If it's a greeting, respond warmly. If it's a general question, be helpful. Keep it to 1-2 sentences.
+
+### 🎭 USER PERSONA & PREFERENCES
+{persona}
 
 User Query: {query}
 
@@ -67,13 +74,17 @@ Response:"""
         return "\n\n---\n\n".join(parts)
 
     async def generate_answer(self, query: str, context: list[str] = None, sources: list[str] = None, mode: str = "analytical") -> str:
+        persona_str = ""
+        if self.persona_memory:
+            persona_str = self.persona_memory.get_persona_context("Generator")
+            
         if mode == "conversational":
-            formatted_prompt = self.conversational_template.format(query=query)
+            formatted_prompt = self.conversational_template.format(query=query, persona=persona_str)
         else:
             if not context:
                 return "No relevant context found to answer the query."
             context_str = self._build_numbered_context(context, sources)
-            formatted_prompt = self.analytical_template.format(context=context_str, query=query)
+            formatted_prompt = self.analytical_template.format(context=context_str, query=query, persona=persona_str)
         
         response = self.llm.invoke(formatted_prompt)
         return response.strip()

@@ -29,18 +29,67 @@ class AgentPersonaMemory:
         except Exception as e:
             logger.error(f"Failed to save persona memory: {e}")
 
-    def add_preference(self, role: str, preference: str):
+    def add_preference(self, role: str, preference: str, llm=None):
         """
         Adds a new preference to a specific agent's persona.
+        If an LLM instance is provided, it intelligently consolidates and de-conflicts preferences.
         """
         if role not in self.personas:
             self.personas[role] = []
         
-        # Avoid exact duplicates
-        if preference not in self.personas[role]:
+        # Simple exact duplicate check
+        if preference in self.personas[role]:
+            return
+            
+        # Intelligent consolidation
+        if llm and self.personas[role]:
+            existing_prefs = "\n".join(f"- {p}" for p in self.personas[role])
+            prompt = f"""You are an Agent Memory Consolidator for the {role} agent.
+Your goal is to merge a new user instruction/preference into the existing set of instructions, resolving any conflicts.
+
+RULES:
+1. The NEW preference is absolute. If it contradicts any existing preference, the NEW preference wins and the old preference MUST be completely replaced or deleted.
+2. Remove any duplicate, redundant, or obsolete instructions.
+3. Keep the output extremely clear, concise, and direct.
+4. Output ONLY the consolidated list of instructions as bullet points (starting with '-'). Do NOT include any introductory or concluding text.
+
+Existing preferences:
+{existing_prefs}
+
+New preference to add:
+- {preference}
+
+Consolidated preferences:"""
+            try:
+                logger.info(f"Consolidating {role} persona preferences with LLM...")
+                response = llm.invoke(prompt).strip()
+                # Parse lines starting with '-' or '*'
+                new_prefs = []
+                for line in response.split("\n"):
+                    line = line.strip()
+                    if line.startswith("-"):
+                        pref_text = line[1:].strip()
+                        if pref_text:
+                            new_prefs.append(pref_text)
+                    elif line.startswith("*"):
+                        pref_text = line[1:].strip()
+                        if pref_text:
+                            new_prefs.append(pref_text)
+                
+                if new_prefs:
+                    self.personas[role] = new_prefs
+                    logger.info(f"Successfully consolidated {role} persona. Current rules: {new_prefs}")
+                else:
+                    # Fallback if parsing failed
+                    self.personas[role].append(preference)
+            except Exception as e:
+                logger.error(f"Failed to consolidate preferences via LLM: {e}")
+                self.personas[role].append(preference)
+        else:
             self.personas[role].append(preference)
-            self._save_memory()
-            logger.info(f"Added new preference to {role} persona: {preference}")
+            
+        self._save_memory()
+        logger.info(f"Saved {role} preference: '{preference}'")
 
     def get_persona_context(self, role: str) -> str:
         """

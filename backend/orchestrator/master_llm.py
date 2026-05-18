@@ -57,7 +57,8 @@ RULES:
 2. Ensure the core entity (e.g. college name, person name) is explicitly mentioned.
 3. If the user mentions 'it' or 'this' in a way that refers to an image, replace it with 'the uploaded image'.
 4. If the user is stating a persistent PREFERENCE or INSTRUCTION for how the AI should behave (e.g. "always use bar charts", "write in Spanish", "keep answers short"), output it inside XML tags. Use <PREFERENCE_VISUALIZER> for chart/visual preferences, and <PREFERENCE_GENERATOR> for text/writing preferences. Example: <PREFERENCE_GENERATOR>Always use bullet points</PREFERENCE_GENERATOR>
-5. If it's a normal query, return ONLY the rewritten question string.
+5. CRITICAL: If the user's question is extremely brief, vague, or contains an ambiguous term/word (like 'apple', 'python', 'the project') and does NOT clearly build on the conversation history, PRESERVE the vagueness exactly. Do NOT invent or guess context, and do NOT rewrite it into a specific question.
+6. If it's a normal query, return ONLY the rewritten question string.
 
 New Question: '{query}'
 Rewritten:"""
@@ -70,11 +71,11 @@ Rewritten:"""
                 
                 if vis_match:
                     pref = vis_match.group(1).strip()
-                    self.persona_memory.add_preference("Visualizer", pref)
+                    self.persona_memory.add_preference("Visualizer", pref, llm=self.generator.llm)
                     yield emit("Master LLM Orchestrator", "Completed", f"Updated Visualizer Persona: '{pref}'")
                 if gen_match:
                     pref = gen_match.group(1).strip()
-                    self.persona_memory.add_preference("Generator", pref)
+                    self.persona_memory.add_preference("Generator", pref, llm=self.generator.llm)
                     yield emit("Master LLM Orchestrator", "Completed", f"Updated Generator Persona: '{pref}'")
                 
                 clean_query = re.sub(r'<PREFERENCE_.*?>.*?</PREFERENCE_.*?>', '', search_query, flags=re.IGNORECASE | re.DOTALL).strip()

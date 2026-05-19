@@ -45,19 +45,46 @@ Response:"""
 
         self.code_prompt = PromptTemplate(
             input_variables=["context", "answer", "output_path", "persona"],
-            template="""You are a Lead Data Scientist. Write a Python script using Matplotlib to create a professional high-fidelity chart based on the data in the context/answer.
+            template="""You are a Lead Data Scientist and UI/UX Designer. Write a Python script using Matplotlib to create a STUNNING, professional, presentation-grade chart based on the data in the context/answer.
 
 ### 🎭 USER PERSONA & PREFERENCES
 {persona}
 
-REQUIREMENTS:
-1. IMPORTS: `import matplotlib.pyplot as plt`, `import numpy as np`.
-2. DESIGN: Use a sleek, modern design. Background color MUST be '#FDFCFB' (soft wheat). Use a palette of Amber (#B45309), Zinc (#71717A), and Emerald (#059669).
-3. ALIGNMENT: If making a bar chart with multiple entities, use `x = np.arange(len(labels))` and adjust bar positions using `x - width/2` etc. to avoid 'range' errors.
-4. DATA: Extract all relevant numerical values for entities mentioned in the query.
-5. SAVE: Save the final image to: '{output_path}'
-6. CLEANUP: Use `plt.tight_layout()`. Do NOT use `plt.show()`, `plt.style.use()`, or any interactive commands.
-7. OUTPUT: Return ONLY the raw python code. No markdown, no intro text.
+### 🎨 PREMIUM DESIGN SYSTEM REQUIREMENTS:
+1. **BACKGROUND & BORDERS**:
+   - Set the figure background color to `#F8FAFC` (soft slate white) for an elegant dashboard look: `fig, ax = plt.subplots(figsize=(8, 5), facecolor='#F8FAFC')` and `ax.set_facecolor('#F8FAFC')`.
+   - Remove the top and right black boundary lines (spines) entirely: 
+     `ax.spines['top'].set_visible(False)`
+     `ax.spines['right'].set_visible(False)`
+   - Set left and bottom spines to a clean soft grey color: `#94A3B8`.
+
+2. **GRIDLINES & ALIGNMENT**:
+   - Add faint, clean, horizontal gridlines (Y-axis only) to help the reader map numbers:
+     `ax.grid(axis='y', linestyle='--', alpha=0.3, color='#CBD5E1')`
+     `ax.set_axisbelow(True)` # Keep grid lines behind the data bars
+
+3. **MODERN COLOR PALETTES**:
+   - Use beautiful modern hex colors. Do NOT use standard flat red/green/blue.
+   - For comparisons/rankings: Sunset Indigo (`#6366F1`), Soft Violet (`#8B5CF6`), Rose Pink (`#EC4899`), Warm Coral (`#F43F5E`).
+   - For finance/metrics: Forest Green (`#10B981`), Mint (`#34D399`), Charcoal Slate (`#475569`).
+   - For general categorical items: Deep Teal (`#0D9488`), Sky Blue (`#0EA5E9`), Amber Gold (`#F59E0B`).
+
+4. **CHART-SPECIFIC EXCELLENCE**:
+   - **BAR CHARTS**: Add clean, bold value labels exactly on top of the bars so they can be read precisely without looking at the Y-axis:
+     Use `ax.bar_label(bars, padding=3, fontsize=9, fontweight='semibold', color='#334155')` or loop to place text values at the top of the bars.
+   - **PIE CHARTS**: Never make a flat standard pie chart. Always make a sleek **Donut Chart** by setting `wedgeprops=dict(width=0.4, edgecolor='w')` which creates a clean cutout circle in the middle.
+   - **LINE CHARTS**: Use thick curves (`linewidth=2.5`), elegant circular markers (`marker='o', markersize=6, markerfacecolor='white', markeredgewidth=2`), and smooth lines.
+
+5. **TYPOGRAPHY & LABELS**:
+   - Use clean, bold titles with proper spacing. Use a modern sans-serif font family.
+   - Set title with a bold weight: `ax.set_title('Title Here', pad=20, fontsize=14, fontweight='bold', color='#1E293B')`
+   - Rotate long X-axis labels by 15 or 30 degrees to completely prevent collisions or text clipping: `plt.xticks(rotation=15, ha='right')`
+
+6. **EXECUTION & CLEANUP**:
+   - Save the final image to: '{output_path}'
+   - Do NOT use `plt.show()`, `plt.style.use()`, or any interactive backend commands.
+   - Call `plt.tight_layout()` right before saving to prevent label truncation.
+   - Return ONLY the executable python code. No markdown formatting, no explanation text.
 
 Python Code:"""
         )

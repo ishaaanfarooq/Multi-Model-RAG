@@ -3,7 +3,7 @@ set -e
 
 echo "========================================================"
 echo "    Starting MultiModelRAG System Locally"
-echo "    Optimized for 16GB RAM + RTX 2050 (4GB VRAM)"
+echo "    Optimized for i5 12th gen + 16GB RAM + RTX 2050"
 echo "========================================================"
 
 echo ""
@@ -14,8 +14,16 @@ if ! command -v ollama &> /dev/null; then
 fi
 
 echo "✅ Ollama found."
-echo "==> Pulling the lightweight model (llama3.2)..."
-ollama pull llama3.2
+echo "==> Pulling the optimized model (llama3.2:7b-q2)..."
+echo "    For your hardware (i5 + 16GB RAM + RTX 2050), Q2 is ideal."
+echo "    Model size: ~3.5GB | Speed: 8-12 tokens/sec"
+ollama pull llama3.2:7b-q2
+
+echo ""
+echo "==> Model pulled successfully!"
+echo "    Tip: If this is slow, you can use an even lighter model:"
+echo "    - phi:2.2b-q4 (1.5GB, super fast)"
+echo "    - mistral:7b-q2 (3.5GB, good balance)"
 
 # Ensure the faiss_index directory exists
 mkdir -p backend/faiss_index
@@ -49,7 +57,8 @@ echo ""
 echo "========================================================"
 echo "✅ Both servers are starting up!"
 echo "   Access the UI at: http://localhost:3000"
-echo "   Backend API at:   http://localhost:8000"
+echo "   Backend API at:   http://localhost:8000/api/health"
+echo "   Ollama at:        http://localhost:11434"
 echo "   Press Ctrl+C to stop both servers."
 echo "========================================================"
 

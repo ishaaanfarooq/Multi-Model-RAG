@@ -8,10 +8,11 @@ class RerankerModel:
     Uses a smaller HuggingFace CrossEncoder model.
     Falls back gracefully to a pass-through if the model cannot be loaded (low-memory cloud environments).
     """
-    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2", min_relevance_score: float = -5.0):
         self.model = None
         self.model_name = model_name
         self.enabled = True
+        self.min_relevance_score = min_relevance_score
         
         try:
             from sentence_transformers import CrossEncoder
@@ -35,10 +36,20 @@ class RerankerModel:
             # scores represent relevance
             scores = self.model.predict(pairs)
             
-            # sort docs by highest score
-            ranked_docs = [doc for _, doc in sorted(zip(scores, documents), reverse=True)]
+            # Log relevance scores for debugging and transparency
+            scored_pairs = sorted(zip(scores, documents), reverse=True)
+            for i, (score, doc) in enumerate(scored_pairs[:top_k + 2]):
+                preview = doc[:80].replace('\n', ' ')
+                logger.info(f"Reranker [{i+1}] score={score:.4f}: \"{preview}...\"")
             
-            return ranked_docs[:top_k]
+            # Filter out documents below minimum relevance threshold
+            filtered = [(score, doc) for score, doc in scored_pairs if score >= self.min_relevance_score]
+            
+            if not filtered:
+                logger.warning(f"Reranker: All documents scored below threshold ({self.min_relevance_score}). Returning top result anyway.")
+                filtered = [scored_pairs[0]]
+            
+            return [doc for _, doc in filtered[:top_k]]
         except Exception as e:
             logger.error(f"Reranking failed at runtime ({e}). Falling back to pass-through.")
             return documents[:top_k]

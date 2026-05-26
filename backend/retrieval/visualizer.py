@@ -71,8 +71,7 @@ Response:"""
    - For general categorical items: Deep Teal (`#0D9488`), Sky Blue (`#0EA5E9`), Amber Gold (`#F59E0B`).
 
 4. **CHART-SPECIFIC EXCELLENCE**:
-   - **BAR CHARTS**: Add clean, bold value labels exactly on top of the bars so they can be read precisely without looking at the Y-axis:
-     Use `ax.bar_label(bars, padding=3, fontsize=9, fontweight='semibold', color='#334155')` or loop to place text values at the top of the bars.
+   - **BAR CHARTS**: Add clean, bold value labels exactly on top of the bars so they can be read precisely without looking at the Y-axis. Ensure `bars` is the direct, un-nested object returned by a single `ax.bar(...)` call. Do NOT wrap it in a list or make a list of bars. Use: `bars = ax.bar(x, y, color=colors)` then `ax.bar_label(bars, padding=3, fontsize=9, fontweight='semibold', color='#334155')`.
    - **PIE CHARTS**: Never make a flat standard pie chart. Always make a sleek **Donut Chart** by setting `wedgeprops=dict(width=0.4, edgecolor='w')` which creates a clean cutout circle in the middle.
    - **LINE CHARTS**: Use thick curves (`linewidth=2.5`), elegant circular markers (`marker='o', markersize=6, markerfacecolor='white', markeredgewidth=2`), and smooth lines.
 
@@ -93,6 +92,7 @@ Python Code:"""
     async def run(self, context: list[str], answer: str) -> str:
         """
         Main entry point. Returns the filename of the generated chart, or None.
+        Supports self-healing if local LLM code execution fails.
         """
         full_context = "\n".join(context)
         
@@ -104,7 +104,7 @@ Python Code:"""
             logger.info(f"VisualizerAgent: No data-rich content detected. (LLM said: {raw_detect[:50]}...)")
             return None
 
-        # 2. Code Generation
+        # 2. Code Generation with Self-Healing Loop
         filename = f"chart_{uuid.uuid4().hex[:8]}.png"
         output_path = os.path.join(self.output_dir, filename)
         
@@ -112,25 +112,48 @@ Python Code:"""
         if self.persona_memory:
             persona_str = self.persona_memory.get_persona_context("Visualizer")
         
-        code_response = self.llm.invoke(self.code_prompt.format(
+        prompt = self.code_prompt.format(
             context=full_context, 
             answer=answer, 
             output_path=output_path,
             persona=persona_str
-        ))
+        )
         
-        # Clean up code (sometimes LLMs include ```python blocks despite instructions)
-        code = self._clean_code(code_response)
+        success = False
+        error_msg = ""
+        attempts = 2
         
-        # 3. Execution
-        success = self._execute_code(code)
-        
-        if success and os.path.exists(output_path):
-            logger.info(f"VisualizerAgent: Successfully generated chart at {output_path}")
-            return filename
-        else:
-            logger.error("VisualizerAgent: Failed to generate chart.")
-            return None
+        for attempt in range(attempts):
+            logger.info(f"VisualizerAgent: Generating code (Attempt {attempt+1}/{attempts})...")
+            code_response = self.llm.invoke(prompt)
+            code = self._clean_code(code_response)
+            
+            success, error_msg = self._execute_code(code)
+            if success and os.path.exists(output_path):
+                logger.info(f"VisualizerAgent: Successfully generated chart at {output_path} on attempt {attempt+1}")
+                return filename
+            
+            logger.warning(f"VisualizerAgent: Code execution failed on attempt {attempt+1}. Error: {error_msg}")
+            logger.warning(f"Failed code on attempt {attempt+1}:\n{code}\n")
+            # Construct a self-healing prompt for the next attempt
+            prompt = f"""You previously wrote Python code using Matplotlib that failed with the following execution error:
+{error_msg}
+
+Here was the code you wrote:
+```python
+{code}
+```
+
+Please correct the code to fix the error. Make sure:
+1. All referenced variables (such as 'x', 'data', 'colors', or loop variables) are completely and correctly defined before being used.
+2. The data/labels lists have matching lengths.
+3. Save the final image to: '{output_path}'
+4. Return ONLY executable python code, with no markdown code blocks or additional explanation.
+
+Corrected Python Code:"""
+
+        logger.error(f"VisualizerAgent: Failed to generate chart after {attempts} attempts.")
+        return None
 
     def _clean_code(self, response: str) -> str:
         # Try finding markdown code block first
@@ -148,12 +171,12 @@ Python Code:"""
         code = re.sub(r'plt\.show\(\)', '', code)
         return code
 
-    def _execute_code(self, code: str) -> bool:
+    def _execute_code(self, code: str) -> tuple[bool, str]:
         """
         Executes the provided python code safely in an OS-managed temp file.
         Uses tempfile.NamedTemporaryFile to avoid permission errors in production.
         """
-        tmp = None
+        tmp_path = None
         try:
             # Write to a secure temp file in the OS temp directory
             with tempfile.NamedTemporaryFile(
@@ -170,11 +193,11 @@ Python Code:"""
 
             if result.returncode != 0:
                 logger.error(f"Execution Error: {result.stderr}")
-                return False
-            return True
+                return False, result.stderr
+            return True, ""
         except Exception as e:
             logger.error(f"Visualizer execution failed: {e}")
-            return False
+            return False, str(e)
         finally:
-            if tmp and os.path.exists(tmp_path):
+            if tmp_path and os.path.exists(tmp_path):
                 os.remove(tmp_path)

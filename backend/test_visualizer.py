@@ -1,5 +1,9 @@
 import asyncio
+import logging
 from retrieval.visualizer import VisualizerAgent
+
+# Configure logging to stdout
+logging.basicConfig(level=logging.INFO)
 
 async def test():
     agent = VisualizerAgent()

@@ -22,6 +22,7 @@ class DocumentParser:
             length_function=len,
             separators=["\n\n", "\n", ". ", " ", ""],
         )
+        logger.info(f"Initialized DocumentParser with chunk_size={self.chunk_size}, chunk_overlap={self.chunk_overlap}")
 
     async def parse_upload_file(self, file: UploadFile) -> list[Document]:
         """

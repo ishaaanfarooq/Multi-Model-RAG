@@ -12,6 +12,7 @@ class DocumentParser:
     """
     Parses uploaded documents and splits them into overlapping text chunks
     optimized for vector similarity search and RAG retrieval quality.
+    This class currently supports PDF, TXT, and Markdown files.
     """
     def __init__(self, chunk_size=1000, chunk_overlap=200):
         self.chunk_size = chunk_size

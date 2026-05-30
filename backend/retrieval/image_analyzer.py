@@ -25,7 +25,7 @@ class ImageAnalyzer:
         """
         Resize large images to fit within max_image_dimension while preserving
         aspect ratio. This reduces payload size, prevents vision model timeouts,
-        and improves OCR accuracy by keeping images at a consistent scale.
+        and improves OCR accuracy by keeping images at a consistent scale before processing.
         """
         try:
             img = Image.open(io.BytesIO(image_bytes))

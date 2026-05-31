@@ -38,7 +38,7 @@ class DualLLM:
 
     def invoke(self, prompt: str) -> str:
         """
-        Try Gemini first, then fallback to Llama.
+        Try invoking Gemini first, then fallback to Llama if it fails.
         """
         if self.gemini_llm:
             try:

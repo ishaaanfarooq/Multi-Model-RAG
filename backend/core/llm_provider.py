@@ -20,7 +20,8 @@ class DualLLM:
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
         
         # Initialize Llama (Always available as fallback)
-        self.llama_llm = Ollama(model=self.llama_model)
+        base_url = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        self.llama_llm = Ollama(model=self.llama_model, base_url=base_url)
         
         # Initialize Gemini if key exists and is not a placeholder
         self.gemini_llm = None

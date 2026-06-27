@@ -38,7 +38,7 @@ class MasterOrchestrator:
         self.cache = ResponseCache()
         self.last_image_context = "" # Persist last analyzed image context
         
-    async def process_query_stream(self, query: str, history: str = "", image_context: str = "") -> AsyncGenerator[str, None]:
+    async def process_query_stream(self, query: str, history: str = "", image_context: str = "", model_choice: str = "auto") -> AsyncGenerator[str, None]:
         """
         Executes the entire RAG pipeline and yields SSE JSON strings at each step.
         """
@@ -49,7 +49,8 @@ class MasterOrchestrator:
             return json.dumps(data)
 
         # 1. Start pipeline
-        yield emit("Master LLM Orchestrator", "Processing", "Analyzing user intent and planning execution")
+        active_model = self.generator.llm.get_active_model_name(model_choice)
+        yield emit("Master LLM Orchestrator", "Processing", f"Analyzing user intent via {active_model}")
         
         search_query = query
         if history:
@@ -70,7 +71,7 @@ RULES:
 
 New Question: '{query}'
 Rewritten:"""
-            search_query = self.generator.llm.invoke(rewrite_prompt).strip()
+            search_query = self.generator.llm.invoke(rewrite_prompt, model_choice=model_choice).strip()
             
             # Check for preferences
             if "<PREFERENCE_" in search_query:
@@ -148,7 +149,8 @@ Rewritten:"""
                     search_query,
                     [f"[Image Analysis]:\n{image_context}"],
                     sources=["Uploaded Image"],
-                    mode="analytical"
+                    mode="analytical",
+                    model_choice=model_choice
                 ):
                     answer_chunks.append(chunk)
                     yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
@@ -157,7 +159,7 @@ Rewritten:"""
 
                 # Run verification against the image context
                 yield emit("Verification Module", "Processing", "Verifying answer against extracted image data...")
-                is_valid, verify_reason = await self.verifier.verify(answer, [image_context])
+                is_valid, verify_reason = await self.verifier.verify(answer, [image_context], model_choice=model_choice)
                 if is_valid:
                     yield emit("Verification Module", "Completed", f"Response passed factuality check: {verify_reason}")
                 else:
@@ -189,7 +191,7 @@ Rewritten:"""
         try:
             from models.agentic_router import AgentRouter
             router = AgentRouter(model_name="llama3.2")
-            tool = await asyncio.to_thread(router.route_query, search_query)
+            tool = await asyncio.to_thread(router.route_query, search_query, model_choice)
             yield emit("Agent Router", "Completed", f"Selected Tool: [{tool}]")
         except Exception as e:
             logger.error(f"Agent Router exception: {e}")
@@ -205,7 +207,7 @@ Rewritten:"""
                 f"If possible, provide 2 or 3 likely interpretations they might mean."
             )
             try:
-                answer = await self.generator.generate_answer(clarification_prompt, mode="conversational")
+                answer = await self.generator.generate_answer(clarification_prompt, mode="conversational", model_choice=model_choice)
             except Exception as e:
                 logger.error(f"Clarification generation failed: {e}")
                 answer = f"Your query '{search_query}' is a bit ambiguous. Could you please clarify what exactly you are looking for?"
@@ -227,7 +229,8 @@ Rewritten:"""
                     search_query,
                     [f"[Image Analysis]:\n{image_context}"],
                     sources=["Uploaded Image"],
-                    mode="analytical"
+                    mode="analytical",
+                    model_choice=model_choice
                 ):
                     answer_chunks.append(chunk)
                     yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
@@ -252,7 +255,8 @@ Rewritten:"""
                 answer_chunks = []
                 async for chunk in self.generator.generate_answer_stream(
                     search_query,
-                    mode="conversational"
+                    mode="conversational",
+                    model_choice=model_choice
                 ):
                     answer_chunks.append(chunk)
                     yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
@@ -273,7 +277,7 @@ Rewritten:"""
                 # Generate variations to improve coverage
                 expansion_prompt = f"Generate 3 diverse search queries to thoroughly answer this request: '{search_query}'. Return ONLY a JSON list of strings."
                 try:
-                    exp_raw = self.generator.llm.invoke(expansion_prompt).strip()
+                    exp_raw = self.generator.llm.invoke(expansion_prompt, model_choice=model_choice).strip()
                     exp_json = re.sub(r'```json\s*|\s*```', '', exp_raw)
                     queries = json.loads(exp_json)
                     yield emit("Agent Router", "Completed", f"Expanded to {len(queries)} research paths")
@@ -326,7 +330,7 @@ Rewritten:"""
                         sources.append("User-provided Data")
 
                 answer_chunks = []
-                async for chunk in self.generator.generate_answer_stream(search_query, gen_context, sources=sources, mode="analytical"):
+                async for chunk in self.generator.generate_answer_stream(search_query, gen_context, sources=sources, mode="analytical", model_choice=model_choice):
                     answer_chunks.append(chunk)
                     yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
                 answer = "".join(answer_chunks)
@@ -348,12 +352,12 @@ Rewritten:"""
                     
                     async def safe_visualize():
                         try:
-                            return await self.visualizer.run(viz_context, answer)
+                            return await self.visualizer.run(viz_context, answer, model_choice=model_choice)
                         except Exception as e:
                             logger.error(f"Visualizer failed: {e}")
                             return None
                             
-                    verify_task = asyncio.create_task(self.verifier.verify(answer, gen_context))
+                    verify_task = asyncio.create_task(self.verifier.verify(answer, gen_context, model_choice=model_choice))
                     visualize_task = asyncio.create_task(safe_visualize())
                     
                     is_valid_data, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
@@ -372,7 +376,7 @@ Rewritten:"""
                         if retry_count < max_retries:
                             yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
                             strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context only."
-                            answer = await self.generator.generate_answer(strict_query, gen_context, sources=sources, mode="analytical")
+                            answer = await self.generator.generate_answer(strict_query, gen_context, sources=sources, mode="analytical", model_choice=model_choice)
                             retry_count += 1
                         else:
                             warning = "The AI may not have found all details in the retrieved web sources. Treat specific figures as approximate."
@@ -436,7 +440,7 @@ Rewritten:"""
                 sources.append("User-provided Data")
 
         answer_chunks = []
-        async for chunk in self.generator.generate_answer_stream(search_query, gen_context, sources=list(set(sources)), mode="analytical"):
+        async for chunk in self.generator.generate_answer_stream(search_query, gen_context, sources=list(set(sources)), mode="analytical", model_choice=model_choice):
             answer_chunks.append(chunk)
             yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
         answer = "".join(answer_chunks)
@@ -458,12 +462,12 @@ Rewritten:"""
             
             async def safe_visualize():
                 try:
-                    return await self.visualizer.run(viz_context, answer)
+                    return await self.visualizer.run(viz_context, answer, model_choice=model_choice)
                 except Exception as e:
                     logger.error(f"Visualizer failed: {e}")
                     return None
                     
-            verify_task = asyncio.create_task(self.verifier.verify(answer, gen_context))
+            verify_task = asyncio.create_task(self.verifier.verify(answer, gen_context, model_choice=model_choice))
             visualize_task = asyncio.create_task(safe_visualize())
             
             is_valid_data, current_chart_filename = await asyncio.gather(verify_task, visualize_task)
@@ -482,7 +486,7 @@ Rewritten:"""
                 if retry_count < max_retries:
                     yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
                     strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context only."
-                    answer = await self.generator.generate_answer(strict_query, gen_context, sources=list(set(sources)), mode="analytical")
+                    answer = await self.generator.generate_answer(strict_query, gen_context, sources=list(set(sources)), mode="analytical", model_choice=model_choice)
                     retry_count += 1
                 else:
                     warning = "The AI's answer may contain information not fully supported by the retrieved source documents despite self-healing attempts."

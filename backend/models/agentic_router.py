@@ -32,14 +32,14 @@ Analyze the query and respond with EXACTLY ONE tool name from the list above. Do
 Tool Selection:'''
         )
         
-    def route_query(self, query: str) -> str:
+    def route_query(self, query: str, model_choice: str = "auto") -> str:
         """
         Takes a query and returns the name of the tool to use.
         Ensures the output matches exactly one of the 3 tools.
         """
         try:
             prompt = self.prompt_template.format(query=query)
-            response = self.llm.invoke(prompt).strip()
+            response = self.llm.invoke(prompt, model_choice=model_choice).strip()
             
             # Clean up response in case LLM gets chatty
             if "Ambiguous_Query" in response:

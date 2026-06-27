@@ -74,7 +74,7 @@ Response:"""
             parts.append(f"[Source {i+1}]{source_label}:\n{chunk}")
         return "\n\n---\n\n".join(parts)
 
-    async def generate_answer(self, query: str, context: list[str] = None, sources: list[str] = None, mode: str = "analytical") -> str:
+    async def generate_answer(self, query: str, context: list[str] = None, sources: list[str] = None, mode: str = "analytical", model_choice: str = "auto") -> str:
         persona_str = ""
         if self.persona_memory:
             persona_str = self.persona_memory.get_persona_context("Generator")
@@ -87,10 +87,10 @@ Response:"""
             context_str = self._build_numbered_context(context, sources)
             formatted_prompt = self.analytical_template.format(context=context_str, query=query, persona=persona_str)
         
-        response = self.llm.invoke(formatted_prompt)
+        response = self.llm.invoke(formatted_prompt, model_choice=model_choice)
         return response.strip()
 
-    async def generate_answer_stream(self, query: str, context: list[str] = None, sources: list[str] = None, mode: str = "analytical") -> AsyncGenerator[str, None]:
+    async def generate_answer_stream(self, query: str, context: list[str] = None, sources: list[str] = None, mode: str = "analytical", model_choice: str = "auto") -> AsyncGenerator[str, None]:
         persona_str = ""
         if self.persona_memory:
             persona_str = self.persona_memory.get_persona_context("Generator")
@@ -104,5 +104,5 @@ Response:"""
             context_str = self._build_numbered_context(context, sources)
             formatted_prompt = self.analytical_template.format(context=context_str, query=query, persona=persona_str)
         
-        async for chunk in self.llm.astream(formatted_prompt):
+        async for chunk in self.llm.astream(formatted_prompt, model_choice=model_choice):
             yield chunk

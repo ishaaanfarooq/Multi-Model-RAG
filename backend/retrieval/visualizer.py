@@ -89,7 +89,7 @@ Response:"""
 Python Code:"""
         )
 
-    async def run(self, context: list[str], answer: str) -> str:
+    async def run(self, context: list[str], answer: str, model_choice: str = "auto") -> str:
         """
         Main entry point. Returns the filename of the generated chart, or None.
         Supports self-healing if local LLM code execution fails.
@@ -97,7 +97,10 @@ Python Code:"""
         full_context = "\n".join(context)
         
         # 1. Detection
-        raw_detect = self.llm.invoke(self.detect_prompt.format(context=full_context, answer=answer))
+        raw_detect = self.llm.invoke(
+            self.detect_prompt.format(context=full_context, answer=answer),
+            model_choice=model_choice,
+        )
         detect_response = re.sub(r'[^a-zA-Z]', '', raw_detect).upper()
         
         if "YES" not in detect_response:
@@ -125,7 +128,7 @@ Python Code:"""
         
         for attempt in range(attempts):
             logger.info(f"VisualizerAgent: Generating code (Attempt {attempt+1}/{attempts})...")
-            code_response = self.llm.invoke(prompt)
+            code_response = self.llm.invoke(prompt, model_choice=model_choice)
             code = self._clean_code(code_response)
             
             success, error_msg = self._execute_code(code)

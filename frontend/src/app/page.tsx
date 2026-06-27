@@ -1,22 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import Sidebar from "@/components/Sidebar";
 import QueryPanel from "@/components/QueryPanel";
-import IngestPanel from "@/components/IngestPanel";
-import CrawlPanel from "@/components/CrawlPanel";
-import PipelineVisualizer from "@/components/PipelineVisualizer";
-
-type ViewType = "chat" | "upload" | "crawl" | "pipeline";
 
 export default function UnifiedPage() {
-  const [activeView, setActiveView] = useState<ViewType>("chat");
-
   return (
     <div className="flex h-screen overflow-hidden bg-[#FAF9F6]">
-      {/* Structural Navigation Sidebar */}
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
-
       {/* Primary Workspace Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         
@@ -27,19 +15,8 @@ export default function UnifiedPage() {
         <div className="relative flex-1 flex flex-col min-h-0 p-8 z-10">
           <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0 structural-card overflow-hidden">
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
-              {/* All views are rendered simultaneously but only the active one is visible.
-                  This keeps components mounted so their state (chat history, etc.) persists. */}
-              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "chat" ? "" : "hidden"}`}>
+              <div className="flex-1 flex flex-col min-h-0">
                 <QueryPanel />
-              </div>
-              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "upload" ? "" : "hidden"}`}>
-                <IngestPanel />
-              </div>
-              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "crawl" ? "" : "hidden"}`}>
-                <CrawlPanel />
-              </div>
-              <div className={`flex-1 flex flex-col min-h-0 ${activeView === "pipeline" ? "" : "hidden"}`}>
-                <PipelineVisualizer />
               </div>
             </div>
           </div>

@@ -123,14 +123,14 @@ def health_check():
     return {"status": "ok"}
 
 @router.get("/stream")
-async def pipeline_stream(query: str, history: str = "", request: Request = None):
+async def pipeline_stream(query: str, history: str = "", model_choice: str = "auto", request: Request = None):
     """
     Server-Sent Events endpoint to stream pipeline status to the frontend.
-    Text-only queries.
+    Text-only queries. Accepts model_choice: 'auto', 'local', or 'api'.
     """
     async def event_generator():
         try:
-            async for event in orchestrator.process_query_stream(query, history):
+            async for event in orchestrator.process_query_stream(query, history, model_choice=model_choice):
                 if request and await request.is_disconnected():
                     break
                 yield event
@@ -145,12 +145,14 @@ async def pipeline_stream_with_image(
     request: Request,
     query: str = Form(...),
     history: str = Form(""),
+    model_choice: str = Form("auto"),
     images: list[UploadFile] = File(default=[]),
 ):
     """
     SSE endpoint that also accepts multiple optional image uploads.
     The images are analyzed by a vision model and their descriptions are
     injected into the RAG pipeline as additional context.
+    Accepts model_choice: 'auto', 'local', or 'api'.
     """
     image_context = ""
     img_paths = []
@@ -183,7 +185,7 @@ async def pipeline_stream_with_image(
                     "action": f"Extracted visual data from {len(img_paths)} uploaded image(s)"
                 })
             
-            async for event in orchestrator.process_query_stream(query, history, image_context=image_context):
+            async for event in orchestrator.process_query_stream(query, history, image_context=image_context, model_choice=model_choice):
                 if await request.is_disconnected():
                     break
                 yield event

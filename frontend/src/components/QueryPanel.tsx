@@ -18,6 +18,8 @@ type Message = {
   timestamp: Date;
   pipeline?: PipelineStage[];
   images?: string[]; // base64 previews of uploaded images
+  documents?: string[];
+  urls?: string[];
 };
 
 type PipelineStage = {
@@ -50,6 +52,7 @@ export default function QueryPanel() {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveStages, setLiveStages] = useState<PipelineStage[]>([]);
+  const [modelChoice, setModelChoice] = useState<"local" | "api">("local");
   
   // Voice input state
   const [isListening, setIsListening] = useState(false);
@@ -59,6 +62,13 @@ export default function QueryPanel() {
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Document and URL ingestion state
+  const [selectedDocuments, setSelectedDocuments] = useState<File[]>([]);
+  const [attachedUrls, setAttachedUrls] = useState<string[]>([]);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [urlDraft, setUrlDraft] = useState("");
+  const documentInputRef = useRef<HTMLInputElement>(null);
   
   // Viewport/ImageViewer state
   const [viewerImage, setViewerImage] = useState<{ src: string, alt: string } | null>(null);
@@ -132,7 +142,16 @@ export default function QueryPanel() {
     setIsListening(true);
   }, [isListening]);
 
-  // ─── Image Upload Logic ──────────────────────────────────────────
+  const appendSystemMessage = useCallback((content: string) => {
+    setMessages((prev) => [...prev, {
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      role: "system",
+      content,
+      timestamp: new Date(),
+    }]);
+  }, []);
+
+  // ─── Attachment Logic ────────────────────────────────────────────
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length > 0) {
@@ -144,6 +163,13 @@ export default function QueryPanel() {
         };
         reader.readAsDataURL(file);
       });
+    }
+  };
+
+  const handleDocumentSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) {
+      setSelectedDocuments((prev) => [...prev, ...files]);
     }
   };
 
@@ -160,6 +186,39 @@ export default function QueryPanel() {
     }
   };
 
+  const clearDocument = (index?: number) => {
+    if (index !== undefined) {
+      setSelectedDocuments((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setSelectedDocuments([]);
+      if (documentInputRef.current) {
+        documentInputRef.current.value = "";
+      }
+    }
+  };
+
+  const addUrlAttachment = () => {
+    const trimmed = urlDraft.trim();
+    if (!trimmed) return;
+
+    try {
+      new URL(trimmed);
+      setAttachedUrls((prev) => prev.includes(trimmed) ? prev : [...prev, trimmed]);
+      setUrlDraft("");
+      setShowUrlInput(false);
+    } catch {
+      appendSystemMessage("Please enter a valid URL including http:// or https://.");
+    }
+  };
+
+  const clearUrlAttachment = (index?: number) => {
+    if (index !== undefined) {
+      setAttachedUrls((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      setAttachedUrls([]);
+    }
+  };
+
   const formatHistory = () => {
     return messages
       .filter(m => m.role !== 'system')
@@ -168,17 +227,57 @@ export default function QueryPanel() {
       .join('\n');
   };
 
-  // ─── Send Logic (supports text-only and text+image) ──────────────
-  const handleSend = useCallback(() => {
+  const ingestDocument = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${API_BASE}/api/ingest`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to ingest ${file.name}`);
+    }
+
+    return response.json();
+  };
+
+  const crawlUrl = async (url: string) => {
+    const response = await fetch(`${API_BASE}/api/crawl`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, max_pages: 15, max_depth: 2 }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to crawl ${url}`);
+    }
+
+    return response.json();
+  };
+
+  // ─── Send Logic (supports text, documents, URLs, and images) ─────
+  const handleSend = useCallback(async () => {
     const query = input.trim();
-    if (!query || isProcessing) return;
+    const hasImages = selectedImages.length > 0;
+    const hasKnowledgeAttachments = selectedDocuments.length > 0 || attachedUrls.length > 0;
+    if ((!query && !hasImages && !hasKnowledgeAttachments) || isProcessing) return;
+
+    const imageFiles = [...selectedImages];
+    const imagePreviewSnapshot = [...imagePreviews];
+    const documentFiles = [...selectedDocuments];
+    const urlSnapshot = [...attachedUrls];
+    const effectiveQuery = query || (hasImages ? "Describe the attached image." : "");
 
     const userMsg: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: query,
+      content: query || "Added knowledge sources to the workspace.",
       timestamp: new Date(),
-      images: imagePreviews.length > 0 ? [...imagePreviews] : undefined,
+      images: imagePreviewSnapshot.length > 0 ? imagePreviewSnapshot : undefined,
+      documents: documentFiles.length > 0 ? documentFiles.map((file) => file.name) : undefined,
+      urls: urlSnapshot.length > 0 ? urlSnapshot : undefined,
     };
     
     setMessages((prev) => [...prev, userMsg]);
@@ -188,13 +287,61 @@ export default function QueryPanel() {
     }
     setIsProcessing(true);
     setLiveStages([]);
+    clearImage();
+    clearDocument();
+    clearUrlAttachment();
+
+    try {
+      for (const file of documentFiles) {
+        setLiveStages((prev) => [...prev, {
+          model: "Document Ingestion",
+          status: "Processing",
+          action: `Indexing ${file.name}`,
+        }]);
+        const result = await ingestDocument(file);
+        setLiveStages((prev) => prev.map((stage) =>
+          stage.model === "Document Ingestion"
+            ? { ...stage, status: "Completed", action: `Ingested ${result.chunks} chunks from ${file.name}` }
+            : stage
+        ));
+        appendSystemMessage(`Document ingested: ${file.name} (${result.chunks} chunks).`);
+      }
+
+      for (const url of urlSnapshot) {
+        setLiveStages((prev) => [...prev, {
+          model: "URL Crawler",
+          status: "Processing",
+          action: `Crawling ${url}`,
+        }]);
+        const result = await crawlUrl(url);
+        setLiveStages((prev) => prev.map((stage) =>
+          stage.model === "URL Crawler"
+            ? { ...stage, status: "Completed", action: `Crawled ${result.pages_crawled} pages into ${result.total_chunks} chunks` }
+            : stage
+        ));
+        appendSystemMessage(`URL crawled: ${url} (${result.total_chunks} chunks).`);
+      }
+    } catch (err) {
+      appendSystemMessage(err instanceof Error ? err.message : "Knowledge ingestion failed.");
+      setIsProcessing(false);
+      setLiveStages([]);
+      return;
+    }
+
+    if (!effectiveQuery) {
+      appendSystemMessage("Knowledge sources are ready. Ask a question about the uploaded or crawled content.");
+      setIsProcessing(false);
+      setLiveStages([]);
+      return;
+    }
 
     // If we have images, use POST with FormData
-    if (selectedImages.length > 0) {
+    if (imageFiles.length > 0) {
       const formData = new FormData();
-      formData.append("query", query);
+      formData.append("query", effectiveQuery);
       formData.append("history", formatHistory());
-      selectedImages.forEach((file) => {
+      formData.append("model_choice", modelChoice);
+      imageFiles.forEach((file) => {
         formData.append("images", file);
       });
 
@@ -238,12 +385,10 @@ export default function QueryPanel() {
         setIsProcessing(false);
         setLiveStages([]);
       });
-
-      clearImage();
     } else {
       // Text-only: use EventSource (GET)
       const eventSource = new EventSource(
-        `${API_BASE}/api/stream?query=${encodeURIComponent(query)}&history=${encodeURIComponent(formatHistory())}`
+        `${API_BASE}/api/stream?query=${encodeURIComponent(effectiveQuery)}&history=${encodeURIComponent(formatHistory())}&model_choice=${encodeURIComponent(modelChoice)}`
       );
 
       eventSource.onmessage = (event) => {
@@ -271,7 +416,7 @@ export default function QueryPanel() {
         eventSource.close();
       };
     }
-  }, [input, isProcessing, selectedImages, imagePreviews, messages]);
+  }, [input, isProcessing, selectedImages, imagePreviews, selectedDocuments, attachedUrls, modelChoice, messages, appendSystemMessage]);
 
   // Shared SSE data handler — returns true if it's the final response
   const handleSSEData = (data: any): boolean => {
@@ -426,6 +571,18 @@ export default function QueryPanel() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+           <label className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#FAF9F6] border border-[#F1F1EF] text-[11px] font-bold text-[#71717A] uppercase tracking-wide">
+             Model
+             <select
+               value={modelChoice}
+               onChange={(e) => setModelChoice(e.target.value as "local" | "api")}
+               disabled={isProcessing}
+               className="bg-white border border-[#E4E4E5] rounded-xl px-3 py-1.5 text-[#18181B] outline-none normal-case tracking-normal"
+             >
+               <option value="local">Local Llama 3.2</option>
+               <option value="api">API Gemini 2.0</option>
+             </select>
+           </label>
            {isProcessing && (
               <div className="flex items-center gap-2 group relative">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
@@ -460,6 +617,24 @@ export default function QueryPanel() {
               <div className="relative">
                 {msg.role === "assistant" && msg.pipeline && (
                   <StageDisplay stages={msg.pipeline} />
+                )}
+
+                {/* User document and URL previews */}
+                {msg.role === "user" && ((msg.documents && msg.documents.length > 0) || (msg.urls && msg.urls.length > 0)) && (
+                  <div className="flex flex-col gap-2 mb-3">
+                    {msg.documents?.map((doc, idx) => (
+                      <div key={`doc-${idx}`} className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-3 py-2 text-xs font-bold">
+                        <span>DOC</span>
+                        <span className="truncate max-w-[260px]">{doc}</span>
+                      </div>
+                    ))}
+                    {msg.urls?.map((url, idx) => (
+                      <div key={`url-${idx}`} className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-3 py-2 text-xs font-bold">
+                        <span>URL</span>
+                        <span className="truncate max-w-[320px]">{url.replace(/^https?:\/\//, "")}</span>
+                      </div>
+                    ))}
+                  </div>
                 )}
                 
                 {/* User images preview */}
@@ -571,8 +746,8 @@ export default function QueryPanel() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Image Preview Bar */}
-      {imagePreviews.length > 0 && (
+      {/* Attachment Preview Bar */}
+      {(imagePreviews.length > 0 || selectedDocuments.length > 0 || attachedUrls.length > 0) && (
         <div className="px-10 py-3 border-t border-[#F1F1EF] bg-[#FEFDFB] flex flex-wrap items-center gap-4">
           {imagePreviews.map((preview, idx) => (
             <div key={idx} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
@@ -590,9 +765,56 @@ export default function QueryPanel() {
               </div>
             </div>
           ))}
+          {selectedDocuments.map((file, idx) => (
+            <div key={`doc-${idx}`} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
+              <div className="relative group flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-[10px] font-black text-amber-800">
+                  {(file.name.split(".").pop() || "DOC").slice(0, 3).toUpperCase()}
+                </div>
+                <button
+                  onClick={() => clearDocument(idx)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="max-w-[140px]">
+                <p className="text-[10px] font-bold text-[#18181B] truncate">{file.name}</p>
+                <p className="text-[9px] text-[#71717A]">{(file.size / 1024).toFixed(1)} KB</p>
+              </div>
+            </div>
+          ))}
+          {attachedUrls.map((url, idx) => (
+            <div key={`url-${idx}`} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
+              <div className="relative group flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-[10px] font-black text-sky-800">
+                  URL
+                </div>
+                <button
+                  onClick={() => clearUrlAttachment(idx)}
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="max-w-[180px]">
+                <p className="text-[10px] font-bold text-[#18181B] truncate">{url.replace(/^https?:\/\//, "")}</p>
+                <p className="text-[9px] text-[#71717A]">Will crawl into knowledge base</p>
+              </div>
+            </div>
+          ))}
           <div className="ml-auto flex items-center gap-3">
-            <p className="text-[10px] text-[#71717A]">Images attached — will be analyzed by Vision AI</p>
-            <button onClick={() => clearImage()} className="text-[10px] font-bold text-red-500 hover:underline">Clear All</button>
+            <p className="text-[10px] text-[#71717A]">Attachments will be processed before the answer</p>
+            <button
+              onClick={() => {
+                clearImage();
+                clearDocument();
+                clearUrlAttachment();
+              }}
+              className="text-[10px] font-bold text-red-500 hover:underline"
+            >
+              Clear All
+            </button>
           </div>
         </div>
       )}
@@ -623,8 +845,65 @@ export default function QueryPanel() {
               className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-xl text-[#71717A] hover:text-[#B45309] hover:bg-amber-50 transition-colors flex-shrink-0"
               title="Attach an image"
             >
-              📎
+              IMG
             </button>
+
+            {/* Document Upload Button */}
+            <input
+              ref={documentInputRef}
+              type="file"
+              accept=".pdf,.txt,.md"
+              multiple
+              onChange={handleDocumentSelect}
+              className="hidden"
+              id="document-upload"
+            />
+            <button
+              type="button"
+              onClick={() => documentInputRef.current?.click()}
+              className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-[11px] font-black text-[#71717A] hover:text-[#B45309] hover:bg-amber-50 transition-colors flex-shrink-0"
+              title="Upload PDF, TXT, or MD"
+            >
+              DOC
+            </button>
+
+            {/* URL Crawl Button */}
+            <div className="relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowUrlInput((value) => !value)}
+                className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-[11px] font-black text-[#71717A] hover:text-[#B45309] hover:bg-amber-50 transition-colors"
+                title="Crawl a URL"
+              >
+                URL
+              </button>
+              {showUrlInput && (
+                <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-3xl bg-white border border-[#E4E4E5] shadow-xl p-3 z-50">
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={urlDraft}
+                      onChange={(e) => setUrlDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addUrlAttachment();
+                        }
+                      }}
+                      placeholder="https://example.com"
+                      className="flex-1 min-w-0 rounded-2xl border border-[#E4E4E5] px-3 py-2 text-xs font-semibold outline-none focus:border-[#B45309]"
+                    />
+                    <button
+                      type="button"
+                      onClick={addUrlAttachment}
+                      className="rounded-2xl bg-[#B45309] px-4 py-2 text-xs font-bold text-white"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             <textarea
               ref={inputRef}
@@ -665,14 +944,14 @@ export default function QueryPanel() {
 
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() && selectedImages.length === 0 && selectedDocuments.length === 0 && attachedUrls.length === 0}
               className="btn-premium rounded-[20px] py-3 shadow-md flex-shrink-0"
             >
               {isProcessing ? "Processing..." : "Analyze →"}
             </button>
           </form>
           <p className="text-[10px] font-bold text-[#71717A] text-center mt-4 uppercase tracking-[0.2em] opacity-40">
-            🎤 Voice Input • 📎 Image Analysis • 📚 Inline Citations
+            Model Selection • Document Ingestion • URL Crawl • Image Analysis • Inline Citations
           </p>
         </div>
       </div>

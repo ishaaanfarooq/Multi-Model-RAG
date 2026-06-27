@@ -26,14 +26,14 @@ Answer:
 Verification Output:"""
         )
 
-    async def verify(self, answer: str, context: list[str]) -> tuple[bool, str]:
+    async def verify(self, answer: str, context: list[str], model_choice: str = "auto") -> tuple[bool, str]:
         if not context:
             return False, "No context provided for verification."
             
         context_str = "\n".join(context)
         formatted_prompt = self.prompt_template.format(context=context_str, answer=answer)
         
-        response = self.llm.invoke(formatted_prompt).strip()
+        response = self.llm.invoke(formatted_prompt, model_choice=model_choice).strip()
         
         # Simple parsing for Result and Reason
         is_valid = "Result: PASS" in response

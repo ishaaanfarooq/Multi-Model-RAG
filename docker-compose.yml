@@ -12,7 +12,7 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_HOST=http://ollama:11434
       - LLM_MODEL=${LLM_MODEL:-llama3.2}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}

@@ -3,6 +3,7 @@ import logging
 from typing import Any, AsyncGenerator
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.llms import Ollama
+from anthropic import Anthropic, AsyncAnthropic
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,22 +13,31 @@ logger = logging.getLogger(__name__)
 class DualLLM:
     """
     A wrapper that prioritizes Gemini API and falls back to Local Llama (Ollama)
-    if the API key is missing or the call fails.
-    
+    if the API key is missing or the call fails. Also supports an explicit
+    Claude (Anthropic) backend.
+
     Supports explicit model_choice:
-      - "auto"  : Try Gemini first, fallback to Llama (original behaviour)
-      - "local" : Force Llama only, never touch Gemini
-      - "api"   : Force Gemini only, surfacing an error if Gemini is unavailable
+      - "auto"   : Try Gemini first, fallback to Llama (original behaviour)
+      - "local"  : Force Llama only, never touch Gemini or Claude
+      - "api"    : Force Gemini only, surfacing an error if Gemini is unavailable
+      - "claude" : Force Claude only, surfacing an error if Claude is unavailable
     """
-    def __init__(self, llama_model: str = "llama3.2", gemini_model: str = "gemini-2.0-flash"):
+    def __init__(
+        self,
+        llama_model: str = "llama3.2",
+        gemini_model: str = "gemini-2.0-flash",
+        claude_model: str = "claude-opus-4-8",
+    ):
         self.llama_model = llama_model
         self.gemini_model = gemini_model
+        self.claude_model = claude_model
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
-        
+        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+
         # Initialize Llama (Always available as fallback)
         base_url = os.getenv("OLLAMA_HOST", "http://localhost:11434")
         self.llama_llm = Ollama(model=self.llama_model, base_url=base_url)
-        
+
         # Initialize Gemini if key exists and is not a placeholder
         self.gemini_llm = None
         if self.gemini_api_key and self.gemini_api_key != "your_gemini_api_key_here":
@@ -42,9 +52,20 @@ class DualLLM:
             except Exception as e:
                 logger.error(f"Failed to initialize Gemini: {e}")
 
+        # Initialize Claude if key exists and is not a placeholder
+        self.claude_client = None
+        self.claude_async_client = None
+        if self.anthropic_api_key and self.anthropic_api_key != "your_anthropic_api_key_here":
+            try:
+                self.claude_client = Anthropic(api_key=self.anthropic_api_key)
+                self.claude_async_client = AsyncAnthropic(api_key=self.anthropic_api_key)
+                logger.info("Claude LLM initialized successfully.")
+            except Exception as e:
+                logger.error(f"Failed to initialize Claude: {e}")
+
     def _should_use_gemini(self, model_choice: str) -> bool:
         """Determine whether Gemini should be attempted based on model_choice."""
-        if model_choice == "local":
+        if model_choice in ("local", "claude"):
             return False
         # For "auto" and "api", try Gemini if it's available
         return self.gemini_llm is not None
@@ -52,12 +73,23 @@ class DualLLM:
     def invoke(self, prompt: str, model_choice: str = "auto") -> str:
         """
         Invoke the LLM. model_choice controls which backend is used:
-          - "auto"  : Gemini first, then Llama fallback
-          - "local" : Llama only
-          - "api"   : Gemini only
+          - "auto"   : Gemini first, then Llama fallback
+          - "local"  : Llama only
+          - "api"    : Gemini only
+          - "claude" : Claude only
         """
         if model_choice == "api" and self.gemini_llm is None:
             raise RuntimeError("Gemini API model was selected, but GEMINI_API_KEY is not configured.")
+        if model_choice == "claude" and self.claude_client is None:
+            raise RuntimeError("Claude model was selected, but ANTHROPIC_API_KEY is not configured.")
+
+        if model_choice == "claude":
+            response = self.claude_client.messages.create(
+                model=self.claude_model,
+                max_tokens=2048,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return "".join(block.text for block in response.content if block.type == "text")
 
         if self._should_use_gemini(model_choice):
             try:
@@ -80,6 +112,18 @@ class DualLLM:
         """
         if model_choice == "api" and self.gemini_llm is None:
             raise RuntimeError("Gemini API model was selected, but GEMINI_API_KEY is not configured.")
+        if model_choice == "claude" and self.claude_async_client is None:
+            raise RuntimeError("Claude model was selected, but ANTHROPIC_API_KEY is not configured.")
+
+        if model_choice == "claude":
+            async with self.claude_async_client.messages.stream(
+                model=self.claude_model,
+                max_tokens=8192,
+                messages=[{"role": "user", "content": prompt}],
+            ) as stream:
+                async for text in stream.text_stream:
+                    yield text
+            return
 
         if self._should_use_gemini(model_choice):
             try:
@@ -103,6 +147,8 @@ class DualLLM:
 
     def get_active_model_name(self, model_choice: str = "auto") -> str:
         """Return a human-readable name for the model that will be used."""
+        if model_choice == "claude":
+            return f"Claude ({self.claude_model})"
         if self._should_use_gemini(model_choice):
             return f"Gemini ({self.gemini_model})"
         return f"Llama ({self.llama_model})"

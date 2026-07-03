@@ -53,7 +53,7 @@ export default function QueryPanel() {
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveStages, setLiveStages] = useState<PipelineStage[]>([]);
-  const [modelChoice, setModelChoice] = useState<"local" | "api">("local");
+  const [modelChoice, setModelChoice] = useState<"local" | "api" | "claude">("local");
 
   // Voice input state
   const [isListening, setIsListening] = useState(false);
@@ -576,12 +576,13 @@ export default function QueryPanel() {
              Model
              <select
                value={modelChoice}
-               onChange={(e) => setModelChoice(e.target.value as "local" | "api")}
+               onChange={(e) => setModelChoice(e.target.value as "local" | "api" | "claude")}
                disabled={isProcessing}
                className="bg-white border border-cream-300 rounded-xl px-3 py-1.5 text-ink outline-none normal-case tracking-normal"
              >
                <option value="local">Local Llama 3.2</option>
                <option value="api">API Gemini 2.0</option>
+               <option value="claude">Claude Opus 4.8</option>
              </select>
            </label>
            {isProcessing && (

@@ -18,6 +18,7 @@ matplotlib==3.8.3
 pandas==2.2.1
 seaborn==0.13.2
 langchain-google-genai==1.0.1
+anthropic==0.116.0
 easyocr==1.7.1
 Pillow==10.2.0
 redis==5.0.4

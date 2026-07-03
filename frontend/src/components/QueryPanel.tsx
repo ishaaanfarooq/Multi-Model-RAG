@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ImageViewer from "@/components/ImageViewer";
+import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon } from "@/components/icons";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -31,15 +32,15 @@ type PipelineStage = {
 
 // Moving StageDisplay outside the component to prevent re-creation on every render
 const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
-  <div className="flex flex-col gap-2 p-4 bg-[#FAF9F6] border border-[#F1F1EF] rounded-3xl mt-4 max-w-[500px]">
-    <p className="text-[10px] font-bold text-[#B45309] uppercase tracking-[0.1em] mb-2 opacity-80">Pipeline Execution Path</p>
+  <div className="flex flex-col gap-2 p-4 bg-cream-100 border border-cream-300 rounded-3xl mt-4 max-w-[500px]">
+    <p className="text-[10px] font-semibold text-brass-600 uppercase tracking-[0.1em] mb-2 opacity-90">Pipeline Path</p>
     {stages.map((stage, i) => (
-      <div key={i} className="flex items-center gap-3 text-[11px] font-medium text-[#71717A]">
+      <div key={i} className="flex items-center gap-3 text-[11px] font-medium text-stone-500">
         <span className={`w-1.5 h-1.5 rounded-full ${
-          stage.status === 'Processing' ? 'bg-[#FF9100] animate-pulse' : 
-          stage.status === 'Completed' ? 'bg-[#16A34A]' : 'bg-[#E4E4E5]'
+          stage.status === 'Processing' ? 'bg-brass-400 animate-pulse' :
+          stage.status === 'Completed' ? 'bg-sage-500' : 'bg-cream-300'
         }`} />
-        <span className="text-[#18181B] font-bold min-w-[140px] text-xs">{stage.model}</span>
+        <span className="text-ink font-semibold min-w-[140px] text-xs">{stage.model}</span>
         <span className="truncate opacity-70 italic">{stage.action}</span>
       </div>
     ))}
@@ -53,11 +54,11 @@ export default function QueryPanel() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveStages, setLiveStages] = useState<PipelineStage[]>([]);
   const [modelChoice, setModelChoice] = useState<"local" | "api">("local");
-  
+
   // Voice input state
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
-  
+
   // Image upload state
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
@@ -69,10 +70,10 @@ export default function QueryPanel() {
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlDraft, setUrlDraft] = useState("");
   const documentInputRef = useRef<HTMLInputElement>(null);
-  
+
   // Viewport/ImageViewer state
   const [viewerImage, setViewerImage] = useState<{ src: string, alt: string } | null>(null);
-  
+
   useEffect(() => {
     setHasMounted(true);
     setMessages([
@@ -80,14 +81,14 @@ export default function QueryPanel() {
         id: "welcome",
         role: "system",
         content:
-          "Welcome to your Professional AI Workspace. Upload documents, crawl websites, or attach images to begin. You can also use the 🎤 microphone for voice input.",
+          "Welcome. Upload a document, crawl a website, or attach an image to begin — then ask a question about it. Voice input is available too.",
         timestamp: new Date(),
       },
     ]);
   }, []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  
+
   // Use a ref for liveStages to capture them in the SSE callback without re-creating handleSend
   const stagesRef = useRef<PipelineStage[]>([]);
 
@@ -279,7 +280,7 @@ export default function QueryPanel() {
       documents: documentFiles.length > 0 ? documentFiles.map((file) => file.name) : undefined,
       urls: urlSnapshot.length > 0 ? urlSnapshot : undefined,
     };
-    
+
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     if (inputRef.current) {
@@ -352,18 +353,18 @@ export default function QueryPanel() {
       }).then(async (response) => {
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
-        
+
         if (!reader) return;
-        
+
         let buffer = "";
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
+
           buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split("\n");
           buffer = lines.pop() || "";
-          
+
           for (const line of lines) {
             if (line.startsWith("data: ")) {
               try {
@@ -379,7 +380,7 @@ export default function QueryPanel() {
         setMessages((prev) => [...prev, {
           id: (Date.now() + 2).toString(),
           role: "system",
-          content: "Failed to process image. Ensure backend is running on Port 8000.",
+          content: "Failed to process image. Ensure the backend is running on port 8000.",
           timestamp: new Date(),
         }]);
         setIsProcessing(false);
@@ -407,7 +408,7 @@ export default function QueryPanel() {
         const errorMsg: Message = {
           id: (Date.now() + 2).toString(),
           role: "system",
-          content: "Network integrity compromised. Ensure your local framework host is active on Port 8000.",
+          content: "Lost connection to the backend. Ensure the local server is running on port 8000.",
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, errorMsg]);
@@ -424,7 +425,7 @@ export default function QueryPanel() {
       setMessages((prev) => {
         const idx = prev.findIndex(m => m.id === "streaming-ai-msg");
         const chunk = data.details?.answer_chunk || "";
-        
+
         if (idx >= 0) {
           const updated = [...prev];
           updated[idx] = {
@@ -452,7 +453,7 @@ export default function QueryPanel() {
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: "assistant",
-          content: data.details?.answer || "Analytical synthesis produced no tangible result.",
+          content: data.details?.answer || "No answer could be produced for this query.",
           sources: data.details?.sources || [],
           source_map: data.details?.source_map || undefined,
           chart: data.details?.chart || undefined,
@@ -538,7 +539,7 @@ export default function QueryPanel() {
             href={url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold no-underline hover:bg-amber-200 transition-colors align-super ml-0.5 mr-0.5 cursor-pointer"
+            className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-brass-100 text-brass-800 text-[9px] font-bold no-underline hover:bg-brass-200 transition-colors align-super ml-0.5 mr-0.5 cursor-pointer"
             title={`Source ${citNum}: ${url}`}
           >
             {citNum}
@@ -560,24 +561,24 @@ export default function QueryPanel() {
 
   return (
     <div className="flex flex-col h-full bg-white relative min-h-0">
-      {/* Structural Header */}
-      <div className="px-10 py-8 border-b border-[#F1F1EF] bg-white z-10 flex items-center justify-between">
+      {/* Header */}
+      <div className="px-10 py-8 border-b border-cream-300 bg-white z-10 flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-[#18181B] font-heading">
-            Neural Analysis Interface
+          <h2 className="text-2xl font-semibold tracking-tight text-ink font-heading">
+            Conversation
           </h2>
-          <p className="text-xs font-medium text-[#71717A] mt-1.5 uppercase tracking-wide opacity-60">
-            Professional Multi-Agent Retrieval Framework
+          <p className="text-xs font-medium text-stone-500 mt-1.5 uppercase tracking-wide opacity-70">
+            Ask questions across your documents, web sources, and images
           </p>
         </div>
         <div className="flex items-center gap-4">
-           <label className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-[#FAF9F6] border border-[#F1F1EF] text-[11px] font-bold text-[#71717A] uppercase tracking-wide">
+           <label className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-cream-100 border border-cream-300 text-[11px] font-semibold text-stone-500 uppercase tracking-wide">
              Model
              <select
                value={modelChoice}
                onChange={(e) => setModelChoice(e.target.value as "local" | "api")}
                disabled={isProcessing}
-               className="bg-white border border-[#E4E4E5] rounded-xl px-3 py-1.5 text-[#18181B] outline-none normal-case tracking-normal"
+               className="bg-white border border-cream-300 rounded-xl px-3 py-1.5 text-ink outline-none normal-case tracking-normal"
              >
                <option value="local">Local Llama 3.2</option>
                <option value="api">API Gemini 2.0</option>
@@ -585,15 +586,15 @@ export default function QueryPanel() {
            </label>
            {isProcessing && (
               <div className="flex items-center gap-2 group relative">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full text-[11px] font-bold text-amber-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600 animate-ping" />
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-brass-50 border border-brass-100 rounded-full text-[11px] font-semibold text-brass-700">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brass-500 animate-ping" />
                   Processing
                 </div>
-                <button 
+                <button
                   onClick={() => setIsProcessing(false)}
-                  className="hidden group-hover:block absolute right-0 top-full mt-2 px-2 py-1 bg-red-50 text-red-600 text-[9px] font-bold rounded border border-red-100 whitespace-nowrap shadow-sm z-50"
+                  className="hidden group-hover:block absolute right-0 top-full mt-2 px-2 py-1 bg-brick-50 text-brick-700 text-[9px] font-bold rounded border border-brick-100 whitespace-nowrap shadow-sm z-50"
                 >
-                  Force Reset ❌
+                  Force Reset
                 </button>
               </div>
            )}
@@ -609,8 +610,8 @@ export default function QueryPanel() {
           >
             <div
               className={`max-w-[800px] ${
-                msg.role === "user" ? "bubble-user" : 
-                msg.role === "system" ? "text-center mx-auto text-[11px] text-[#71717A] italic opacity-60 py-4 max-w-[400px]" : 
+                msg.role === "user" ? "bubble-user" :
+                msg.role === "system" ? "text-center mx-auto text-[11px] text-stone-500 italic opacity-70 py-4 max-w-[420px]" :
                 "bubble-ai"
               }`}
             >
@@ -623,39 +624,39 @@ export default function QueryPanel() {
                 {msg.role === "user" && ((msg.documents && msg.documents.length > 0) || (msg.urls && msg.urls.length > 0)) && (
                   <div className="flex flex-col gap-2 mb-3">
                     {msg.documents?.map((doc, idx) => (
-                      <div key={`doc-${idx}`} className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-3 py-2 text-xs font-bold">
-                        <span>DOC</span>
+                      <div key={`doc-${idx}`} className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-3 py-2 text-xs font-semibold">
+                        <DocumentIcon className="w-3.5 h-3.5" />
                         <span className="truncate max-w-[260px]">{doc}</span>
                       </div>
                     ))}
                     {msg.urls?.map((url, idx) => (
-                      <div key={`url-${idx}`} className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-3 py-2 text-xs font-bold">
-                        <span>URL</span>
+                      <div key={`url-${idx}`} className="flex items-center gap-2 rounded-xl bg-white/15 border border-white/20 px-3 py-2 text-xs font-semibold">
+                        <GlobeIcon className="w-3.5 h-3.5" />
                         <span className="truncate max-w-[320px]">{url.replace(/^https?:\/\//, "")}</span>
                       </div>
                     ))}
                   </div>
                 )}
-                
+
                 {/* User images preview */}
                 {msg.role === "user" && msg.images && msg.images.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {msg.images.map((imgSrc, idx) => (
-                      <div 
+                      <div
                         key={idx}
                         className="rounded-xl overflow-hidden border border-white/20 max-w-[150px] cursor-pointer group/img relative"
                         onClick={() => setViewerImage({ src: imgSrc, alt: `Uploaded image ${idx + 1}` })}
                       >
                         <img src={imgSrc} alt="Uploaded" className="w-full h-auto group-hover:scale-105 transition-transform duration-500" />
                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                           <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">View Full size</span>
+                           <span className="text-white text-[10px] font-bold uppercase tracking-widest bg-black/40 px-2 py-1 rounded-full backdrop-blur-sm">View full size</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
 
-                <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-[#27272A] prose prose-zinc max-w-none prose-sm prose-headings:mb-2 prose-p:mb-2 prose-table:border prose-table:border-zinc-200 prose-th:bg-zinc-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2" : ""}`}>
+                <div className={`text-[15px] leading-[1.65] font-medium ${msg.role === "assistant" ? "mt-4 text-ink-light prose prose-zinc max-w-none prose-sm prose-headings:mb-2 prose-p:mb-2 prose-table:border prose-table:border-cream-300 prose-th:bg-cream-50 prose-th:px-3 prose-th:py-2 prose-td:px-3 prose-td:py-2" : ""}`}>
                   {msg.role === "assistant" ? (
                     renderCitedContent(msg.content, msg.source_map)
                   ) : (
@@ -664,44 +665,44 @@ export default function QueryPanel() {
                 </div>
 
                 {msg.chart && (
-                  <div className="mt-6 p-4 bg-[#FAF9F6] border border-[#F1F1EF] rounded-2xl overflow-hidden group/chart">
-                    <p className="text-[10px] uppercase font-bold text-[#B45309] tracking-widest mb-3 opacity-60">Generated Analytical Visualization</p>
-                    <img 
-                      src={msg.chart.startsWith('http') ? msg.chart : `${API_BASE}${msg.chart}`} 
+                  <div className="mt-6 p-4 bg-cream-100 border border-cream-300 rounded-2xl overflow-hidden group/chart">
+                    <p className="text-[10px] uppercase font-semibold text-brass-600 tracking-widest mb-3 opacity-90">Generated visualization</p>
+                    <img
+                      src={msg.chart.startsWith('http') ? msg.chart : `${API_BASE}${msg.chart}`}
                       alt="Analytical Chart"
-                      className="w-full h-auto rounded-xl shadow-sm border border-amber-100 group-hover/chart:scale-[1.01] transition-transform duration-500 cursor-pointer"
-                      onClick={() => setViewerImage({ 
-                        src: msg.chart!.startsWith('http') ? msg.chart! : `${API_BASE}${msg.chart}`, 
-                        alt: "Analytical Chart" 
+                      className="w-full h-auto rounded-xl shadow-sm border border-brass-100 group-hover/chart:scale-[1.01] transition-transform duration-500 cursor-pointer"
+                      onClick={() => setViewerImage({
+                        src: msg.chart!.startsWith('http') ? msg.chart! : `${API_BASE}${msg.chart}`,
+                        alt: "Analytical Chart"
                       })}
                     />
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="text-[9px] font-bold text-[#71717A] uppercase tracking-tighter italic">Auto-Generated Data Visualization</span>
-                      <button 
-                        onClick={() => setViewerImage({ 
-                          src: msg.chart!.startsWith('http') ? msg.chart! : `${API_BASE}${msg.chart}`, 
-                          alt: "Analytical Chart" 
+                      <span className="text-[9px] font-semibold text-stone-500 uppercase tracking-tighter italic">Auto-generated from retrieved data</span>
+                      <button
+                        onClick={() => setViewerImage({
+                          src: msg.chart!.startsWith('http') ? msg.chart! : `${API_BASE}${msg.chart}`,
+                          alt: "Analytical Chart"
                         })}
-                        className="text-[10px] font-bold text-[#B45309] hover:underline"
+                        className="text-[10px] font-semibold text-brass-600 hover:underline"
                       >
-                        View High Resolution →
+                        View full resolution →
                       </button>
                     </div>
                   </div>
                 )}
-                
+
                 {/* Numbered Source Citations */}
                 {msg.sources && msg.sources.length > 0 && (
-                  <div className="mt-6 pt-4 border-t border-[#F1F1EF]">
-                    <p className="text-[10px] uppercase font-bold text-[#B45309] tracking-widest mb-3">
-                      📚 Cited Sources
+                  <div className="mt-6 pt-4 border-t border-cream-300">
+                    <p className="text-[10px] uppercase font-semibold text-brass-600 tracking-widest mb-3">
+                      Cited Sources
                     </p>
                     <div className="flex flex-col gap-1.5">
                       {msg.sources.map((src, i) => (
                         <a key={i} href={src} target="_blank" rel="noreferrer"
-                          className="flex items-center gap-2 text-[11px] text-[#71717A] hover:text-amber-700 transition-colors group/src"
+                          className="flex items-center gap-2 text-[11px] text-stone-500 hover:text-brass-700 transition-colors group/src"
                           title={src}>
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-800 text-[9px] font-bold flex-shrink-0 group-hover/src:bg-amber-200 transition-colors">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-brass-100 text-brass-800 text-[9px] font-bold flex-shrink-0 group-hover/src:bg-brass-200 transition-colors">
                             {i + 1}
                           </span>
                           <span className="truncate max-w-[400px] font-medium">
@@ -714,17 +715,17 @@ export default function QueryPanel() {
                 )}
 
                 {msg.warning && (
-                  <div className="mt-4 flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl">
-                    <span className="text-lg mt-0.5">⚠️</span>
+                  <div className="mt-4 flex items-start gap-3 px-4 py-3 bg-brass-50 border border-brass-200 rounded-2xl">
+                    <WarningIcon className="w-[18px] h-[18px] text-brass-700 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-[10px] uppercase font-bold text-amber-700 tracking-widest mb-1">Accuracy Notice</p>
-                      <p className="text-[12px] text-amber-800 leading-relaxed">{msg.warning}</p>
+                      <p className="text-[10px] uppercase font-semibold text-brass-700 tracking-widest mb-1">Accuracy notice</p>
+                      <p className="text-[12px] text-brass-800 leading-relaxed">{msg.warning}</p>
                     </div>
                   </div>
                 )}
               </div>
             </div>
-            <span className="text-[10px] text-[#A1A1AA] font-bold mt-2 px-2 uppercase tracking-tighter opacity-50">
+            <span className="text-[10px] text-stone-400 font-semibold mt-2 px-2 uppercase tracking-tighter opacity-60">
               {msg.role} • {hasMounted && msg.timestamp instanceof Date ? msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
             </span>
           </div>
@@ -733,10 +734,10 @@ export default function QueryPanel() {
         {/* Live Pipeline Processing Module */}
         {isProcessing && (
           <div className="flex flex-col items-start animate-structural-up">
-             <div className="bubble-ai border-amber-200/50 bg-[#FFFCF8]">
+             <div className="bubble-ai border-brass-200/50 bg-brass-50/40">
                 <div className="flex items-center gap-3 mb-4">
-                   <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
-                   <span className="text-[11px] font-bold text-amber-700 uppercase tracking-widest">Active Neural Routing...</span>
+                   <span className="w-2 h-2 rounded-full bg-brass-500 animate-ping" />
+                   <span className="text-[11px] font-semibold text-brass-700 uppercase tracking-widest">Working on it…</span>
                 </div>
                 <StageDisplay stages={liveStages} />
              </div>
@@ -748,86 +749,86 @@ export default function QueryPanel() {
 
       {/* Attachment Preview Bar */}
       {(imagePreviews.length > 0 || selectedDocuments.length > 0 || attachedUrls.length > 0) && (
-        <div className="px-10 py-3 border-t border-[#F1F1EF] bg-[#FEFDFB] flex flex-wrap items-center gap-4">
+        <div className="px-10 py-3 border-t border-cream-300 bg-cream-50 flex flex-wrap items-center gap-4">
           {imagePreviews.map((preview, idx) => (
-            <div key={idx} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
+            <div key={idx} className="flex items-center gap-3 bg-white p-2 border border-cream-300 rounded-xl shadow-sm">
               <div className="relative group">
-                <img src={preview} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-amber-200" />
+                <img src={preview} alt="Preview" className="w-10 h-10 rounded-lg object-cover border border-brass-200" />
                 <button
                   onClick={() => clearImage(idx)}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-brick-500 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  ✕
+                  <CloseIcon className="w-2.5 h-2.5" />
                 </button>
               </div>
               <div className="max-w-[100px]">
-                <p className="text-[10px] font-bold text-[#18181B] truncate">{selectedImages[idx]?.name}</p>
+                <p className="text-[10px] font-semibold text-ink truncate">{selectedImages[idx]?.name}</p>
               </div>
             </div>
           ))}
           {selectedDocuments.map((file, idx) => (
-            <div key={`doc-${idx}`} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
+            <div key={`doc-${idx}`} className="flex items-center gap-3 bg-white p-2 border border-cream-300 rounded-xl shadow-sm">
               <div className="relative group flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-[10px] font-black text-amber-800">
-                  {(file.name.split(".").pop() || "DOC").slice(0, 3).toUpperCase()}
+                <div className="w-10 h-10 rounded-lg bg-brass-50 border border-brass-200 flex items-center justify-center text-brass-800">
+                  <DocumentIcon className="w-[18px] h-[18px]" />
                 </div>
                 <button
                   onClick={() => clearDocument(idx)}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-brick-500 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  ×
+                  <CloseIcon className="w-2.5 h-2.5" />
                 </button>
               </div>
               <div className="max-w-[140px]">
-                <p className="text-[10px] font-bold text-[#18181B] truncate">{file.name}</p>
-                <p className="text-[9px] text-[#71717A]">{(file.size / 1024).toFixed(1)} KB</p>
+                <p className="text-[10px] font-semibold text-ink truncate">{file.name}</p>
+                <p className="text-[9px] text-stone-500">{(file.size / 1024).toFixed(1)} KB</p>
               </div>
             </div>
           ))}
           {attachedUrls.map((url, idx) => (
-            <div key={`url-${idx}`} className="flex items-center gap-3 bg-white p-2 border border-[#F1F1EF] rounded-xl shadow-sm">
+            <div key={`url-${idx}`} className="flex items-center gap-3 bg-white p-2 border border-cream-300 rounded-xl shadow-sm">
               <div className="relative group flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-[10px] font-black text-sky-800">
-                  URL
+                <div className="w-10 h-10 rounded-lg bg-cream-100 border border-cream-300 flex items-center justify-center text-brass-700">
+                  <GlobeIcon className="w-[18px] h-[18px]" />
                 </div>
                 <button
                   onClick={() => clearUrlAttachment(idx)}
-                  className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-2 -right-2 w-5 h-5 bg-brick-500 text-white rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                  ×
+                  <CloseIcon className="w-2.5 h-2.5" />
                 </button>
               </div>
               <div className="max-w-[180px]">
-                <p className="text-[10px] font-bold text-[#18181B] truncate">{url.replace(/^https?:\/\//, "")}</p>
-                <p className="text-[9px] text-[#71717A]">Will crawl into knowledge base</p>
+                <p className="text-[10px] font-semibold text-ink truncate">{url.replace(/^https?:\/\//, "")}</p>
+                <p className="text-[9px] text-stone-500">Will crawl into knowledge base</p>
               </div>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-3">
-            <p className="text-[10px] text-[#71717A]">Attachments will be processed before the answer</p>
+            <p className="text-[10px] text-stone-500">Attachments are processed before the answer</p>
             <button
               onClick={() => {
                 clearImage();
                 clearDocument();
                 clearUrlAttachment();
               }}
-              className="text-[10px] font-bold text-red-500 hover:underline"
+              className="text-[10px] font-semibold text-brick-500 hover:underline"
             >
-              Clear All
+              Clear all
             </button>
           </div>
         </div>
       )}
 
-      {/* Structural Input Area */}
-      <div className="px-10 py-10 border-t border-[#F1F1EF] bg-white">
+      {/* Input Area */}
+      <div className="px-10 py-8 border-t border-cream-300 bg-white">
         <div className="max-w-4xl mx-auto relative group">
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleSend();
             }}
-            className="flex gap-3 items-end bg-[#FCFBFA] border-2 border-[#F1F1EF] p-2 pr-4 rounded-[28px] focus-within:border-[#B45309] focus-within:bg-white shadow-sm transition-all duration-300"
+            className="flex gap-2 items-end bg-cream-50 border-2 border-cream-300 p-2 pr-4 rounded-[28px] focus-within:border-brass-500 focus-within:bg-white shadow-sm transition-all duration-300"
           >
             {/* Image Upload Button */}
             <input
@@ -842,10 +843,10 @@ export default function QueryPanel() {
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
-              className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-xl text-[#71717A] hover:text-[#B45309] hover:bg-amber-50 transition-colors flex-shrink-0"
+              className="w-11 h-11 rounded-full bg-cream-100 flex items-center justify-center text-stone-500 hover:text-brass-600 hover:bg-brass-50 transition-colors flex-shrink-0"
               title="Attach an image"
             >
-              IMG
+              <ImageIcon className="w-[18px] h-[18px]" />
             </button>
 
             {/* Document Upload Button */}
@@ -861,10 +862,10 @@ export default function QueryPanel() {
             <button
               type="button"
               onClick={() => documentInputRef.current?.click()}
-              className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-[11px] font-black text-[#71717A] hover:text-[#B45309] hover:bg-amber-50 transition-colors flex-shrink-0"
-              title="Upload PDF, TXT, or MD"
+              className="w-11 h-11 rounded-full bg-cream-100 flex items-center justify-center text-stone-500 hover:text-brass-600 hover:bg-brass-50 transition-colors flex-shrink-0"
+              title="Upload a PDF, TXT, or MD document"
             >
-              DOC
+              <DocumentIcon className="w-[18px] h-[18px]" />
             </button>
 
             {/* URL Crawl Button */}
@@ -872,13 +873,13 @@ export default function QueryPanel() {
               <button
                 type="button"
                 onClick={() => setShowUrlInput((value) => !value)}
-                className="w-12 h-12 rounded-full bg-[#FAF9F6] flex items-center justify-center text-[11px] font-black text-[#71717A] hover:text-[#B45309] hover:bg-amber-50 transition-colors"
-                title="Crawl a URL"
+                className="w-11 h-11 rounded-full bg-cream-100 flex items-center justify-center text-stone-500 hover:text-brass-600 hover:bg-brass-50 transition-colors"
+                title="Attach a URL to crawl"
               >
-                URL
+                <GlobeIcon className="w-[18px] h-[18px]" />
               </button>
               {showUrlInput && (
-                <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-3xl bg-white border border-[#E4E4E5] shadow-xl p-3 z-50">
+                <div className="absolute bottom-full left-0 mb-3 w-[320px] rounded-3xl bg-white border border-cream-300 shadow-xl p-3 z-50">
                   <div className="flex gap-2">
                     <input
                       type="url"
@@ -891,12 +892,12 @@ export default function QueryPanel() {
                         }
                       }}
                       placeholder="https://example.com"
-                      className="flex-1 min-w-0 rounded-2xl border border-[#E4E4E5] px-3 py-2 text-xs font-semibold outline-none focus:border-[#B45309]"
+                      className="flex-1 min-w-0 rounded-2xl border border-cream-300 px-3 py-2 text-xs font-semibold outline-none focus:border-brass-500"
                     />
                     <button
                       type="button"
                       onClick={addUrlAttachment}
-                      className="rounded-2xl bg-[#B45309] px-4 py-2 text-xs font-bold text-white"
+                      className="rounded-2xl bg-brass-500 px-4 py-2 text-xs font-semibold text-white hover:bg-brass-600 transition-colors"
                     >
                       Add
                     </button>
@@ -922,8 +923,8 @@ export default function QueryPanel() {
                 }
               }}
               rows={1}
-              placeholder={isListening ? "🎤 Listening... speak now" : "Submit query to the MultiModel RAG Framework..."}
-              className="flex-1 bg-transparent border-none outline-none text-[#18181B] font-medium text-[15px] placeholder:text-[#A1A1AA] resize-none overflow-y-auto min-h-[24px] max-h-[200px] py-3"
+              placeholder={isListening ? "Listening… speak now" : "Ask a question, or attach a document, URL, or image…"}
+              className="flex-1 bg-transparent border-none outline-none text-ink font-medium text-[15px] placeholder:text-stone-400 resize-none overflow-y-auto min-h-[24px] max-h-[200px] py-3"
               disabled={isProcessing}
             />
 
@@ -932,14 +933,14 @@ export default function QueryPanel() {
               type="button"
               onClick={toggleVoiceInput}
               disabled={isProcessing}
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-lg transition-all flex-shrink-0 ${
-                isListening 
-                  ? "bg-red-500 text-white animate-pulse shadow-lg shadow-red-200" 
-                  : "bg-[#FAF9F6] text-[#71717A] hover:text-[#B45309] hover:bg-amber-50"
+              className={`w-10 h-10 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                isListening
+                  ? "bg-brick-500 text-white animate-pulse shadow-lg shadow-brick-100"
+                  : "bg-cream-100 text-stone-500 hover:text-brass-600 hover:bg-brass-50"
               }`}
               title={isListening ? "Stop listening" : "Voice input"}
             >
-              🎤
+              <MicIcon className="w-[18px] h-[18px]" />
             </button>
 
             <button
@@ -947,20 +948,20 @@ export default function QueryPanel() {
               disabled={!input.trim() && selectedImages.length === 0 && selectedDocuments.length === 0 && attachedUrls.length === 0}
               className="btn-premium rounded-[20px] py-3 shadow-md flex-shrink-0"
             >
-              {isProcessing ? "Processing..." : "Analyze →"}
+              {isProcessing ? "Sending…" : <><span>Send</span><SendIcon className="w-4 h-4" /></>}
             </button>
           </form>
-          <p className="text-[10px] font-bold text-[#71717A] text-center mt-4 uppercase tracking-[0.2em] opacity-40">
-            Model Selection • Document Ingestion • URL Crawl • Image Analysis • Inline Citations
+          <p className="text-[10px] font-semibold text-stone-500 text-center mt-4 uppercase tracking-[0.2em] opacity-50">
+            Documents • Web crawl • Images • Voice • Inline citations
           </p>
         </div>
       </div>
       {/* Image Viewer Modal */}
       {viewerImage && (
-        <ImageViewer 
-          src={viewerImage.src} 
-          alt={viewerImage.alt} 
-          onClose={() => setViewerImage(null)} 
+        <ImageViewer
+          src={viewerImage.src}
+          alt={viewerImage.alt}
+          onClose={() => setViewerImage(null)}
         />
       )}
     </div>

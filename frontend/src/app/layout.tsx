@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Multi-Model RAG | Professional AI Pipeline",
-  description: "Cloud-Based Multi-Model Retrieval-Augmented Generation System with real-time pipeline visualization",
+  title: "MultiModel RAG | Research Workspace",
+  description: "A multi-model retrieval-augmented generation workspace for documents, web sources, and images.",
 };
 
 export default function RootLayout({

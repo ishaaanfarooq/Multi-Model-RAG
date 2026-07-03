@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { GlobeIcon, CheckIcon, WarningIcon, LinkIcon } from "@/components/icons";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -30,7 +31,7 @@ export default function CrawlPanel() {
     try {
       new URL(trimmedUrl);
     } catch {
-      alert("Please provide a valid structural URL (including http:// or https://)");
+      alert("Please provide a valid URL (including http:// or https://)");
       return;
     }
 
@@ -39,7 +40,7 @@ export default function CrawlPanel() {
       status: "initializing",
       pages_done: 0,
       total_found: 0,
-      message: "Establishing connection to target host...",
+      message: "Connecting to the target site…",
     });
 
     const params = new URLSearchParams({
@@ -73,7 +74,7 @@ export default function CrawlPanel() {
           status: "error",
           pages_done: 0,
           total_found: 0,
-          message: "Crawl sequence aborted. Host connection failed.",
+          message: "Crawl failed — could not reach the host.",
         },
       ]);
       eventSource.close();
@@ -81,39 +82,41 @@ export default function CrawlPanel() {
   }, [url, isCrawling]);
 
   return (
-    <div className="flex flex-col h-full bg-[#FAF9F6] min-h-0">
-      {/* Structural Header */}
-      <div className="px-10 py-10 bg-white border-b border-[#F1F1EF] z-10">
-        <h2 className="text-2xl font-bold tracking-tight text-[#18181B] font-heading">
-          Web Intelligence Ingress
+    <div className="flex flex-col h-full bg-cream-100 min-h-0">
+      {/* Header */}
+      <div className="px-10 py-10 bg-white border-b border-cream-300 z-10">
+        <h2 className="text-2xl font-semibold tracking-tight text-ink font-heading">
+          Web Sources
         </h2>
-        <p className="text-xs font-semibold text-[#71717A] mt-1.5 uppercase tracking-widest opacity-60">
-          Deep-crawl and vectorize website content for structural knowledge
+        <p className="text-xs font-medium text-stone-500 mt-1.5 uppercase tracking-widest opacity-70">
+          Crawl a website and add its content to the knowledge base
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-10 py-12">
         <div className="max-w-4xl mx-auto space-y-12">
-          
+
           {/* Target Module */}
-          <div className="p-10 rounded-[40px] bg-white border border-[#E4E4E5] structural-card relative overflow-hidden group">
-             <div className="absolute top-0 right-0 p-6 opacity-[0.03] transition-opacity duration-500 group-hover:opacity-[0.06]">
-                <span className="text-9xl transition-transform duration-700 group-hover:scale-110">🛰️</span>
+          <div className="p-10 rounded-[40px] bg-white border border-cream-300 structural-card relative overflow-hidden group">
+             <div className="absolute top-0 right-0 p-6 text-brass-900 opacity-[0.04] transition-opacity duration-500 group-hover:opacity-[0.07]">
+                <GlobeIcon className="w-32 h-32 transition-transform duration-700 group-hover:scale-110" />
              </div>
-             
+
              <div className="relative z-10 flex flex-col items-center">
-                <label className="text-[10px] font-bold text-[#B45309] uppercase tracking-[0.2em] block mb-6 text-center">
-                   Target Intelligence Endpoint
+                <label className="text-[10px] font-semibold text-brass-600 uppercase tracking-[0.2em] block mb-6 text-center">
+                   Target URL
                 </label>
                 <div className="flex gap-4 w-full">
                    <div className="flex-1 relative">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400">🌐</div>
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-stone-400">
+                        <LinkIcon className="w-[18px] h-[18px]" />
+                      </div>
                       <input
                          type="url"
                          value={url}
                          onChange={(e) => setUrl(e.target.value)}
-                         placeholder="Enter target URL (e.g., https://example.com)"
-                         className="input-warm !pl-16 bg-[#FCFBFA] py-4"
+                         placeholder="Enter a URL (e.g., https://example.com)"
+                         className="input-warm !pl-16 bg-cream-50 py-4"
                          disabled={isCrawling}
                       />
                    </div>
@@ -122,61 +125,62 @@ export default function CrawlPanel() {
                       disabled={!url.trim() || isCrawling}
                       className="btn-premium px-10 rounded-[20px] shadow-lg whitespace-nowrap min-w-[200px]"
                    >
-                      {isCrawling ? "Analyzing Host..." : "Initialize Crawl"}
+                      {isCrawling ? "Crawling…" : "Start Crawl"}
                    </button>
                 </div>
-                <p className="mt-4 text-[10px] font-bold text-[#71717A] opacity-40 uppercase tracking-widest leading-relaxed text-center">
-                   Verified Crawl Support: Single-page docs & full site mapping (max 15 pages)
+                <p className="mt-4 text-[10px] font-semibold text-stone-500 opacity-60 uppercase tracking-widest leading-relaxed text-center">
+                   Supports single pages and site maps · up to 15 pages
                 </p>
              </div>
           </div>
 
           {/* Active Status Module */}
           {currentStatus && (
-            <div className="animate-structural-up p-8 rounded-[32px] border-2 border-amber-200/50 bg-white shadow-xl shadow-amber-900/5 relative overflow-hidden">
+            <div className="animate-structural-up p-8 rounded-[32px] border-2 border-brass-200/60 bg-white shadow-xl shadow-brass-900/5 relative overflow-hidden">
                {isCrawling && (
-                 <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-[shimmer_2s_infinite]" />
+                 <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-transparent via-brass-400 to-transparent animate-[shimmer_2s_infinite]" />
                )}
                <div className="flex items-start justify-between mb-8">
                   <div className="flex items-center gap-4">
-                     <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-2xl shadow-sm">
-                        {isCrawling ? "🔎" : "🎯"}
+                     <div className="w-14 h-14 rounded-2xl bg-brass-50 border border-brass-100 flex items-center justify-center text-brass-700 shadow-sm">
+                        <GlobeIcon className="w-6 h-6" />
                      </div>
                      <div>
-                        <h3 className="text-lg font-bold text-[#18181B] font-heading">
-                           {isCrawling ? "Intelligence Feed: Active" : "Intelligence Sequence Result"}
+                        <h3 className="text-lg font-semibold text-ink font-heading">
+                           {isCrawling ? "Crawl in progress" : "Crawl result"}
                         </h3>
-                        <p className="text-xs font-bold text-[#B45309] uppercase tracking-widest opacity-80 mt-0.5">
-                           Ingress Target: {url.replace(/^https?:\/\//, '')}
+                        <p className="text-xs font-semibold text-brass-600 uppercase tracking-widest opacity-90 mt-0.5">
+                           Target: {url.replace(/^https?:\/\//, '')}
                         </p>
                      </div>
                   </div>
-                  <div className="flex items-center gap-2 px-4 py-2 bg-zinc-50 border border-zinc-100 rounded-full text-[10px] font-bold text-zinc-700 tracking-widest uppercase">
+                  <div className="flex items-center gap-2 px-4 py-2 bg-cream-100 border border-cream-300 rounded-full text-[10px] font-semibold text-stone-600 tracking-widest uppercase">
                       {currentStatus.status}
                   </div>
                </div>
 
                <div className="grid grid-cols-2 gap-6 mb-8">
-                  <div className="p-4 rounded-3xl bg-[#FAF9F6] border border-[#F1F1EF] flex flex-col items-center justify-center">
-                     <span className="text-2xl font-bold font-heading text-[#18181B]">{currentStatus.pages_done}</span>
-                     <span className="text-[10px] font-bold text-[#71717A] uppercase tracking-widest mt-1 opacity-60">Pages Scanned</span>
+                  <div className="p-4 rounded-3xl bg-cream-100 border border-cream-300 flex flex-col items-center justify-center">
+                     <span className="text-2xl font-semibold font-heading text-ink">{currentStatus.pages_done}</span>
+                     <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-widest mt-1 opacity-70">Pages scanned</span>
                   </div>
-                  <div className="p-4 rounded-3xl bg-[#FAF9F6] border border-[#F1F1EF] flex flex-col items-center justify-center">
-                      <span className="text-2xl font-bold font-heading text-[#18181B]">{currentStatus.total_found}</span>
-                      <span className="text-[10px] font-bold text-[#71717A] uppercase tracking-widest mt-1 opacity-60">Verified Assets</span>
+                  <div className="p-4 rounded-3xl bg-cream-100 border border-cream-300 flex flex-col items-center justify-center">
+                      <span className="text-2xl font-semibold font-heading text-ink">{currentStatus.total_found}</span>
+                      <span className="text-[10px] font-semibold text-stone-500 uppercase tracking-widest mt-1 opacity-70">Links found</span>
                   </div>
                </div>
 
-               <div className="p-4 rounded-2xl bg-white border border-amber-100/50 italic text-sm text-zinc-900 flex gap-3 items-center">
-                  <span className="text-xl">📻</span>
-                  <p>&quot;{currentStatus.message}&quot;</p>
+               <div className="p-4 rounded-2xl bg-white border border-brass-100/60 italic text-sm text-ink">
+                  &quot;{currentStatus.message}&quot;
                </div>
-               
+
                {currentStatus.total_chunks && (
-                  <div className="mt-4 p-4 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-between">
-                      <span className="text-xs font-bold text-green-700 uppercase tracking-widest">Vector Embedding Complete</span>
-                      <span className="text-xs font-bold text-green-900 bg-white px-3 py-1 rounded-lg border border-green-200">
-                         {currentStatus.total_chunks} Neural Chunks Mapped
+                  <div className="mt-4 p-4 rounded-2xl bg-sage-50 border border-sage-100 flex items-center justify-between">
+                      <span className="text-xs font-semibold text-sage-700 uppercase tracking-widest flex items-center gap-2">
+                        <CheckIcon className="w-4 h-4" /> Embedding complete
+                      </span>
+                      <span className="text-xs font-semibold text-sage-700 bg-white px-3 py-1 rounded-lg border border-sage-100">
+                         {currentStatus.total_chunks} chunks added
                       </span>
                   </div>
                )}
@@ -186,18 +190,20 @@ export default function CrawlPanel() {
           {/* History Feed */}
           {history.length > 0 && (
             <div className="space-y-6 pt-10">
-               <h3 className="text-xs font-bold text-[#71717A] uppercase tracking-[0.2em] border-b border-zinc-200 pb-3">Previous Ingress Logs</h3>
+               <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-[0.2em] border-b border-cream-300 pb-3">Previous crawls</h3>
                <div className="space-y-3">
                   {history.map((h, i) => (
-                    <div key={i} className="p-4 rounded-2xl bg-white border border-[#F1F1EF] flex items-center justify-between opacity-70 hover:opacity-100 transition-opacity duration-300">
+                    <div key={i} className="p-4 rounded-2xl bg-white border border-cream-300 flex items-center justify-between opacity-80 hover:opacity-100 transition-opacity duration-300">
                        <div className="flex items-center gap-4">
-                          <span className="text-xl">{h.status === 'error' ? '❌' : '✅'}</span>
+                          <span className={h.status === 'error' ? 'text-brick-500' : 'text-sage-500'}>
+                            {h.status === 'error' ? <WarningIcon className="w-5 h-5" /> : <CheckIcon className="w-5 h-5" />}
+                          </span>
                           <div>
-                             <p className="text-xs font-bold text-zinc-900">Host Analysis: {h.pages_done} Pages</p>
-                             <p className="text-[10px] font-medium text-zinc-500 italic truncate max-w-[300px]">{h.message}</p>
+                             <p className="text-xs font-semibold text-ink">{h.pages_done} pages scanned</p>
+                             <p className="text-[10px] font-medium text-stone-500 italic truncate max-w-[300px]">{h.message}</p>
                           </div>
                        </div>
-                       <span className="text-[10px] font-bold text-amber-700 uppercase p-2 py-1 bg-amber-50 rounded-lg">Historical Log</span>
+                       <span className="text-[10px] font-semibold text-brass-700 uppercase p-2 py-1 bg-brass-50 rounded-lg">Log</span>
                     </div>
                   ))}
                </div>

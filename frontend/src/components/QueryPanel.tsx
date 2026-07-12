@@ -419,8 +419,26 @@ export default function QueryPanel() {
     }
   }, [input, isProcessing, selectedImages, imagePreviews, selectedDocuments, attachedUrls, modelChoice, messages, appendSystemMessage]);
 
-  // Shared SSE data handler — returns true if it's the final response
+  // Shared SSE data handler — returns true if the stream is finished (final or failed)
   const handleSSEData = (data: any): boolean => {
+    // Backend surfaced a real error (e.g. an API key is not configured).
+    // Show its message instead of letting the closing stream fall through to
+    // the generic "lost connection" handler.
+    if (data.status === "Failed") {
+      setMessages((prev) => [
+        ...prev.filter((m) => m.id !== "streaming-ai-msg"),
+        {
+          id: `err-${Date.now()}`,
+          role: "system",
+          content: data.action || "The request failed.",
+          timestamp: new Date(),
+        },
+      ]);
+      setIsProcessing(false);
+      setLiveStages([]);
+      return true;
+    }
+
     if (data.model === "Final Response" && data.status === "Processing" && data.action === "Streaming") {
       setMessages((prev) => {
         const idx = prev.findIndex(m => m.id === "streaming-ai-msg");

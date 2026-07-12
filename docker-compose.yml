@@ -12,16 +12,19 @@ services:
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
-      - OLLAMA_HOST=http://ollama:11434
+      # Point at the host's Ollama, which has CUDA access to the RTX 2050.
+      # The bundled `ollama` container is CPU-only (no GPU passthrough), so
+      # using it would run inference on the CPU and be ~10x slower.
+      # Requires the host Ollama to listen on 0.0.0.0 (see README / .env).
+      - OLLAMA_HOST=http://host.docker.internal:11434
       - LLM_MODEL=${LLM_MODEL:-llama3.2}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    depends_on:
-      ollama:
-        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

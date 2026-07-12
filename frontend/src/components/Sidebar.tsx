@@ -120,7 +120,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             <div className="h-px bg-cream-300" />
             <div className="flex items-center justify-between px-1">
               <span className="text-[11px] font-semibold text-stone-500">Model</span>
-              <span className="text-[11px] font-semibold text-ink">Llama 3.2</span>
+              <span className="text-[11px] font-semibold text-ink">Qwen2.5 3B</span>
             </div>
           </div>
         </div>

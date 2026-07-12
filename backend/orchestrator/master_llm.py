@@ -190,7 +190,7 @@ Rewritten:"""
         tool = "Search_Knowledge_Base"
         try:
             from models.agentic_router import AgentRouter
-            router = AgentRouter(model_name="llama3.2")
+            router = AgentRouter()
             tool = await asyncio.to_thread(router.route_query, search_query, model_choice)
             yield emit("Agent Router", "Completed", f"Selected Tool: [{tool}]")
         except Exception as e:

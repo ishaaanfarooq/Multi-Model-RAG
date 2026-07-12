@@ -8,7 +8,7 @@ class GenerationModel:
     Prioritizes Gemini with a local Llama fallback.
     Supports inline source citations [1], [2] etc.
     """
-    def __init__(self, model_name: str = "llama3.2", persona_memory=None):
+    def __init__(self, model_name: str = None, persona_memory=None):
         self.llm = DualLLM(llama_model=model_name)
         self.persona_memory = persona_memory
         

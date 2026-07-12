@@ -15,7 +15,7 @@ class VisualizerAgent:
     Matplotlib charts to visualize the information.
     Prioritizes Gemini for sophisticated data extraction and code generation.
     """
-    def __init__(self, model_name: str = "llama3.2", output_dir: str = "uploads", persona_memory=None):
+    def __init__(self, model_name: str = None, output_dir: str = "uploads", persona_memory=None):
         self.llm = DualLLM(llama_model=model_name)
         self.output_dir = output_dir
         self.persona_memory = persona_memory

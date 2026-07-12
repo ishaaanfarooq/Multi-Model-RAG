@@ -12,7 +12,7 @@ class AgentRouter:
     2. Search_Knowledge_Base: Existing ingested corpus
     3. Direct_Chat: Casual conversation
     """
-    def __init__(self, model_name: str = "llama3.2"):
+    def __init__(self, model_name: str = None):
         # Prioritize Gemini for accurate classification
         self.llm = DualLLM(llama_model=model_name)
         

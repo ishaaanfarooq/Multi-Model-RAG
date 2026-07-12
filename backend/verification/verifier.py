@@ -6,7 +6,7 @@ class VerificationModule:
     Evaluates the generated response against the retrieved context to ensure 
     it aligns with the source documents and reduces hallucinations.
     """
-    def __init__(self, model_name: str = "llama3.2"):
+    def __init__(self, model_name: str = None):
         self.llm = DualLLM(llama_model=model_name)
         self.prompt_template = PromptTemplate(
             input_variables=["context", "answer"],

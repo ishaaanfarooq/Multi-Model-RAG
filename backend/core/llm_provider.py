@@ -10,6 +10,10 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+# Single source of truth for the local model. Callers pass llama_model=None to
+# inherit this, so LLM_MODEL in the environment actually takes effect.
+DEFAULT_LLAMA_MODEL = os.getenv("LLM_MODEL") or "llama3.2"
+
 class DualLLM:
     """
     A wrapper that prioritizes Gemini API and falls back to Local Llama (Ollama)
@@ -24,11 +28,11 @@ class DualLLM:
     """
     def __init__(
         self,
-        llama_model: str = "llama3.2",
+        llama_model: str = None,
         gemini_model: str = "gemini-2.0-flash",
         claude_model: str = "claude-opus-4-8",
     ):
-        self.llama_model = llama_model
+        self.llama_model = llama_model or DEFAULT_LLAMA_MODEL
         self.gemini_model = gemini_model
         self.claude_model = claude_model
         self.gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -153,5 +157,5 @@ class DualLLM:
             return f"Gemini ({self.gemini_model})"
         return f"Llama ({self.llama_model})"
 
-def get_llm(llama_model: str = "llama3.2"):
+def get_llm(llama_model: str = None):
     return DualLLM(llama_model=llama_model)

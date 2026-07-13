@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import uuid
-from fastapi import APIRouter, File, UploadFile, Request, Form
+from fastapi import APIRouter, File, UploadFile, Request, Form, HTTPException
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
@@ -24,6 +24,11 @@ class CrawlRequest(BaseModel):
     url: str
     max_pages: int = 20
     max_depth: int = 2
+
+class ContactRequest(BaseModel):
+    name: str
+    email: str | None = None
+    phone: str | None = None
 
 # Global instances
 orchestrator = MasterOrchestrator()
@@ -121,6 +126,104 @@ def health_check():
     Health check.
     """
     return {"status": "ok"}
+
+
+# ─── Contacts (also the recipient allowlist) ──────────────────────────────────
+@router.get("/contacts")
+def list_contacts():
+    return {"contacts": orchestrator.contacts.list_contacts()}
+
+
+@router.post("/contacts")
+def upsert_contact(req: ContactRequest):
+    try:
+        contact = orchestrator.contacts.upsert(req.name, req.email, req.phone)
+        return {"status": "saved", "contact": contact}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.delete("/contacts/{name}")
+def delete_contact(name: str):
+    if orchestrator.contacts.delete(name):
+        return {"status": "deleted", "name": name}
+    raise HTTPException(status_code=404, detail=f"No contact named '{name}'.")
+
+
+# ─── Actions: approve / reject a draft ────────────────────────────────────────
+# The send lives here and nowhere else. The LLM can only ever create a draft; the
+# transition from draft to actually-sent requires this explicit human call.
+@router.get("/actions/pending")
+def list_pending_actions():
+    return {"pending": orchestrator.actions.list_pending()}
+
+
+@router.post("/actions/{action_id}/approve")
+def approve_action(action_id: str):
+    draft = orchestrator.actions.get(action_id)
+    if not draft:
+        raise HTTPException(status_code=404, detail="That draft no longer exists.")
+
+    payload = draft["payload"]
+    kind = draft["kind"]
+
+    # Re-check the allowlist at send time. The draft could have been sitting around, and
+    # this is the last gate before something irreversible happens.
+    if kind == "email":
+        if not orchestrator.contacts.is_allowed_email(payload["to"]):
+            orchestrator.actions.resolve(action_id, "failed", "Recipient is not a saved contact.")
+            raise HTTPException(status_code=403, detail=f"{payload['to']} is not a saved contact.")
+        try:
+            msg_id = orchestrator.gmail.send(payload["to"], payload["subject"], payload["body"])
+            resolved = orchestrator.actions.resolve(action_id, "sent", msg_id)
+            return {"status": "sent", "action": resolved}
+        except Exception as e:
+            orchestrator.actions.resolve(action_id, "failed", str(e))
+            raise HTTPException(status_code=502, detail=f"Failed to send email: {e}")
+
+    if kind == "whatsapp":
+        if not orchestrator.contacts.is_allowed_phone(payload["to"]):
+            orchestrator.actions.resolve(action_id, "failed", "Recipient is not a saved contact.")
+            raise HTTPException(status_code=403, detail=f"{payload['to']} is not a saved contact.")
+        try:
+            sid = orchestrator.whatsapp.send(payload["to"], payload["body"])
+            resolved = orchestrator.actions.resolve(action_id, "sent", sid)
+            return {"status": "sent", "action": resolved}
+        except Exception as e:
+            orchestrator.actions.resolve(action_id, "failed", str(e))
+            raise HTTPException(status_code=502, detail=str(e))
+
+    raise HTTPException(status_code=400, detail=f"Unknown action kind '{kind}'.")
+
+
+@router.post("/actions/{action_id}/reject")
+def reject_action(action_id: str):
+    resolved = orchestrator.actions.resolve(action_id, "rejected")
+    if not resolved:
+        raise HTTPException(status_code=404, detail="That draft no longer exists.")
+    return {"status": "rejected", "action": resolved}
+
+
+@router.get("/actions/audit")
+def action_audit(limit: int = 100):
+    """Every action attempted — sent, rejected, and blocked."""
+    return {"audit": orchestrator.actions.read_audit(limit)}
+
+
+@router.get("/integrations/status")
+def integrations_status():
+    return {
+        "gmail": {
+            "available": orchestrator.gmail.available,
+            "account": orchestrator.gmail.email_address,
+            "error": orchestrator.gmail._init_error,
+        },
+        "whatsapp": {
+            "available": orchestrator.whatsapp.available,
+            "error": orchestrator.whatsapp._init_error,
+        },
+        "contacts": len(orchestrator.contacts.contacts),
+    }
 
 @router.get("/stream")
 async def pipeline_stream(query: str, history: str = "", model_choice: str = "auto", request: Request = None):

@@ -9,6 +9,7 @@ services:
       - ./backend:/app
       - faiss_data:/app/faiss_index
       - upload_data:/app/uploads
+      - action_data:/app/data
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
@@ -20,9 +21,13 @@ services:
       - LLM_MODEL=${LLM_MODEL:-llama3.2}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID:-}
+      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN:-}
+      - TWILIO_WHATSAPP_FROM=${TWILIO_WHATSAPP_FROM:-whatsapp:+14155238886}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATA_DIR=/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
@@ -73,6 +78,7 @@ services:
 
 volumes:
   faiss_data:
+  action_data:
   upload_data:
   ollama_data:
   redis_data:

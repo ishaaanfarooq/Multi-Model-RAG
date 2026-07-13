@@ -4,9 +4,21 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ImageViewer from "@/components/ImageViewer";
-import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon } from "@/components/icons";
+import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon, CheckIcon, ChatIcon } from "@/components/icons";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+type PendingAction = {
+  id: string;
+  kind: "email" | "whatsapp";
+  payload: {
+    recipient_name: string;
+    to: string;
+    subject?: string;
+    body: string;
+  };
+  status: string;
+};
 
 type Message = {
   id: string;
@@ -21,6 +33,10 @@ type Message = {
   images?: string[]; // base64 previews of uploaded images
   documents?: string[];
   urls?: string[];
+  // A drafted email/WhatsApp awaiting the user's approval. Nothing is sent until
+  // they press Approve — the backend only ever hands us a draft.
+  pendingAction?: PendingAction;
+  actionOutcome?: { status: "sent" | "rejected" | "failed"; detail?: string };
 };
 
 type PipelineStage = {
@@ -73,6 +89,9 @@ export default function QueryPanel() {
 
   // Viewport/ImageViewer state
   const [viewerImage, setViewerImage] = useState<{ src: string, alt: string } | null>(null);
+
+  // id of the draft currently being sent/discarded, so we can disable its buttons
+  const [resolvingAction, setResolvingAction] = useState<string | null>(null);
 
   useEffect(() => {
     setHasMounted(true);
@@ -219,6 +238,55 @@ export default function QueryPanel() {
       setAttachedUrls([]);
     }
   };
+
+  // ─── Approve / reject a drafted action ───────────────────────────────
+  // The send happens here and only here, behind an explicit click. The model can
+  // draft, but a human commits.
+  const resolveAction = useCallback(async (messageId: string, actionId: string, approve: boolean) => {
+    setResolvingAction(actionId);
+    try {
+      const res = await fetch(`${API_BASE}/api/actions/${actionId}/${approve ? "approve" : "reject"}`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.detail || `Request failed (${res.status})`);
+      }
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                pendingAction: undefined,
+                actionOutcome: {
+                  status: approve ? "sent" : "rejected",
+                  detail: approve ? "Sent successfully." : "Discarded — nothing was sent.",
+                },
+              }
+            : m
+        )
+      );
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === messageId
+            ? {
+                ...m,
+                pendingAction: undefined,
+                actionOutcome: {
+                  status: "failed",
+                  detail: err instanceof Error ? err.message : "Failed to send.",
+                },
+              }
+            : m
+        )
+      );
+    } finally {
+      setResolvingAction(null);
+    }
+  }, []);
 
   const formatHistory = () => {
     return messages
@@ -476,6 +544,7 @@ export default function QueryPanel() {
           source_map: data.details?.source_map || undefined,
           chart: data.details?.chart || undefined,
           warning: data.details?.warning || undefined,
+          pendingAction: data.details?.pending_action || undefined,
           timestamp: new Date(),
           pipeline: [...stagesRef.current, data].map(stage =>
             stage.model === data.model ? data : stage
@@ -682,6 +751,86 @@ export default function QueryPanel() {
                     msg.content
                   )}
                 </div>
+
+                {/* Drafted action awaiting approval — the human-in-the-loop gate */}
+                {msg.pendingAction && (
+                  <div className="mt-5 rounded-2xl border-2 border-brass-300 bg-brass-50/60 overflow-hidden">
+                    <div className="flex items-center gap-2 px-5 py-3 bg-brass-100/70 border-b border-brass-200">
+                      {msg.pendingAction.kind === "email" ? (
+                        <DocumentIcon className="w-4 h-4 text-brass-700" />
+                      ) : (
+                        <ChatIcon className="w-4 h-4 text-brass-700" />
+                      )}
+                      <span className="text-[11px] font-semibold uppercase tracking-widest text-brass-800">
+                        {msg.pendingAction.kind === "email" ? "Draft email" : "Draft WhatsApp"} · not sent
+                      </span>
+                    </div>
+
+                    <div className="px-5 py-4 space-y-2.5">
+                      <div className="flex gap-3 text-[13px]">
+                        <span className="w-16 flex-shrink-0 font-semibold text-stone-500">To</span>
+                        <span className="text-ink font-medium">
+                          {msg.pendingAction.payload.recipient_name}{" "}
+                          <span className="text-stone-500 font-normal">
+                            &lt;{msg.pendingAction.payload.to}&gt;
+                          </span>
+                        </span>
+                      </div>
+                      {msg.pendingAction.payload.subject && (
+                        <div className="flex gap-3 text-[13px]">
+                          <span className="w-16 flex-shrink-0 font-semibold text-stone-500">Subject</span>
+                          <span className="text-ink font-medium">{msg.pendingAction.payload.subject}</span>
+                        </div>
+                      )}
+                      <div className="flex gap-3 text-[13px]">
+                        <span className="w-16 flex-shrink-0 font-semibold text-stone-500">Message</span>
+                        <span className="text-ink-light whitespace-pre-wrap leading-relaxed">
+                          {msg.pendingAction.payload.body}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 px-5 py-3 bg-white/60 border-t border-brass-200">
+                      <button
+                        onClick={() => resolveAction(msg.id, msg.pendingAction!.id, true)}
+                        disabled={resolvingAction === msg.pendingAction.id}
+                        className="btn-premium !py-2 !px-5 !text-[13px] rounded-xl"
+                      >
+                        {resolvingAction === msg.pendingAction.id ? "Sending…" : "Approve & send"}
+                      </button>
+                      <button
+                        onClick={() => resolveAction(msg.id, msg.pendingAction!.id, false)}
+                        disabled={resolvingAction === msg.pendingAction.id}
+                        className="btn-secondary !py-2 !px-5 !text-[13px] rounded-xl"
+                      >
+                        Reject
+                      </button>
+                      <span className="ml-auto text-[10px] text-stone-500 italic">
+                        Nothing is sent until you approve
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Outcome once the user has decided */}
+                {msg.actionOutcome && (
+                  <div
+                    className={`mt-5 flex items-center gap-3 px-4 py-3 rounded-2xl border text-[13px] font-medium ${
+                      msg.actionOutcome.status === "sent"
+                        ? "bg-sage-50 border-sage-100 text-sage-700"
+                        : msg.actionOutcome.status === "rejected"
+                        ? "bg-cream-100 border-cream-300 text-stone-600"
+                        : "bg-brick-50 border-brick-100 text-brick-700"
+                    }`}
+                  >
+                    {msg.actionOutcome.status === "sent" ? (
+                      <CheckIcon className="w-4 h-4 flex-shrink-0" />
+                    ) : (
+                      <WarningIcon className="w-4 h-4 flex-shrink-0" />
+                    )}
+                    <span>{msg.actionOutcome.detail}</span>
+                  </div>
+                )}
 
                 {msg.chart && (
                   <div className="mt-6 p-4 bg-cream-100 border border-cream-300 rounded-2xl overflow-hidden group/chart">

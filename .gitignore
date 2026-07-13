@@ -31,3 +31,10 @@ backend/uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+# Action-layer credentials & state — never commit these
+backend/credentials.json
+backend/token.json
+backend/contacts.json
+backend/data/
+backend/action_audit.jsonl

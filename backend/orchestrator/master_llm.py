@@ -13,6 +13,11 @@ from retrieval.web_search import search_web
 from core.memory_manager import NotebookMemory
 from core.persona_memory import AgentPersonaMemory
 from utils.cache import ResponseCache
+from actions.contacts import ContactsStore
+from actions.registry import ActionRegistry
+from actions.extractor import ActionExtractor, scan_for_injection
+from actions.gmail_client import GmailClient
+from actions.whatsapp_client import WhatsAppClient
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +42,16 @@ class MasterOrchestrator:
         self.notebook = NotebookMemory()
         self.cache = ResponseCache()
         self.last_image_context = "" # Persist last analyzed image context
-        
+
+        # Outbound actions (email / WhatsApp). These are the only parts of the system
+        # that can affect the outside world, so they never fire on their own: the agent
+        # drafts, a human approves, and only then does anything get sent.
+        self.contacts = ContactsStore()
+        self.actions = ActionRegistry()
+        self.extractor = ActionExtractor(self.generator.llm, self.contacts)
+        self.gmail = GmailClient()
+        self.whatsapp = WhatsAppClient()
+
     async def process_query_stream(self, query: str, history: str = "", image_context: str = "", model_choice: str = "auto") -> AsyncGenerator[str, None]:
         """
         Executes the entire RAG pipeline and yields SSE JSON strings at each step.
@@ -197,6 +211,136 @@ Rewritten:"""
             logger.error(f"Agent Router exception: {e}")
             yield emit("Agent Router", "Completed", f"Fallback to Default Tool: [{tool}] (Error: {str(e)[:60]})")
 
+
+        # ─── OUTBOUND ACTION branches (draft only — never sends) ──────────────
+        # These are the only tools that can touch the outside world, so they are the
+        # only place an injected instruction could do real damage. Two things contain
+        # that. First, extraction reads the RAW `query` — the user's own words — and
+        # never `search_query`, which by this point may carry text lifted from a crawled
+        # page or an uploaded image. Second, the recipient must resolve to a saved
+        # contact. Nothing here sends: it produces a draft for a human to approve.
+        if tool in ("Send_Email", "Send_WhatsApp"):
+            kind = "email" if tool == "Send_Email" else "whatsapp"
+            client = self.gmail if kind == "email" else self.whatsapp
+            label = "Email Agent" if kind == "email" else "WhatsApp Agent"
+
+            if not client.available:
+                reason = client._init_error or f"{kind} is not configured."
+                self.actions.audit_blocked(reason, kind, {}, query)
+                yield emit(label, "Completed", "Channel not configured")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": f"I can't send that — {reason}",
+                    "sources": [],
+                })
+                return
+
+            yield emit(label, "Processing", f"Composing {kind} from your instruction (contacts allowlist enforced)")
+            try:
+                if kind == "email":
+                    payload = await asyncio.to_thread(self.extractor.extract_email, query, model_choice)
+                else:
+                    payload = await asyncio.to_thread(self.extractor.extract_whatsapp, query, model_choice)
+            except LookupError as e:
+                # Recipient not on the allowlist. This is the defense doing its job, so
+                # record it — a blocked send is exactly the evidence worth reporting.
+                self.actions.audit_blocked(str(e), kind, {"raw_query": query}, query)
+                yield emit(label, "Completed", "Blocked: recipient is not a saved contact")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": str(e),
+                    "sources": [],
+                })
+                return
+            except Exception as e:
+                logger.error(f"Action extraction failed: {e}")
+                yield emit(label, "Completed", f"Could not compose the {kind}")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": f"I couldn't work out what to send. Try phrasing it like "
+                              f"\"email Ali about the project deadline\". ({str(e)[:80]})",
+                    "sources": [],
+                })
+                return
+
+            draft = self.actions.create_draft(kind, payload, query)
+            yield emit(label, "Completed", f"Draft ready for {payload['recipient_name']} — awaiting your approval")
+
+            summary = (
+                f"I've drafted this {'email' if kind == 'email' else 'WhatsApp message'} "
+                f"to **{payload['recipient_name']}**. Nothing has been sent — review it "
+                f"and press Approve to send, or Reject to discard."
+            )
+            yield emit("Final Response", "Completed", "Awaiting approval", {
+                "answer": summary,
+                "sources": [],
+                "pending_action": draft,
+            })
+            return
+
+        # ─── READ EMAIL branch (inbox as a retrieval source) ──────────────────
+        if tool == "Read_Email":
+            if not self.gmail.available:
+                yield emit("Email Agent", "Completed", "Gmail not configured")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": f"I can't read your inbox — {self.gmail._init_error}",
+                    "sources": [],
+                })
+                return
+
+            yield emit("Email Agent", "Processing", "Fetching recent mail from your inbox")
+            try:
+                gmail_query = "is:unread" if "unread" in query.lower() else ""
+                emails = await asyncio.to_thread(self.gmail.list_recent, 10, gmail_query)
+            except Exception as e:
+                logger.error(f"Inbox fetch failed: {e}")
+                yield emit("Email Agent", "Completed", f"Inbox fetch failed: {str(e)[:60]}")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": f"I couldn't reach your inbox: {str(e)[:120]}",
+                    "sources": [],
+                })
+                return
+
+            if not emails:
+                yield emit("Email Agent", "Completed", "No matching mail found")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": "I didn't find any matching emails in your inbox.",
+                    "sources": [],
+                })
+                return
+
+            # Email is untrusted input — anyone can mail you. Flag injection attempts so
+            # they land in the audit trail rather than passing silently into the LLM.
+            for e in emails:
+                hits = scan_for_injection(f"{e['subject']} {e['body']}")
+                if hits:
+                    logger.warning(f"Injection-like content in email from {e['from']}: {hits}")
+                    self.actions.audit_blocked(
+                        f"Injection-like content in inbox mail: {hits}",
+                        "read_email", {"from": e["from"], "subject": e["subject"]}, query,
+                    )
+
+            yield emit("Email Agent", "Completed", f"Retrieved {len(emails)} email(s)")
+
+            ctx = [
+                f"From: {e['from']}\nDate: {e['date']}\nSubject: {e['subject']}\n\n{e['body'][:1500]}"
+                for e in emails
+            ]
+            sources = [f"{e['subject']} — {e['from']}" for e in emails]
+
+            yield emit("Generation", "Processing", "Summarizing your inbox")
+            chunks = []
+            async for chunk in self.generator.generate_answer_stream(
+                query, ctx, sources=sources, mode="analytical", model_choice=model_choice
+            ):
+                chunks.append(chunk)
+                yield emit("Final Response", "Processing", "Streaming", {"answer_chunk": chunk})
+            answer = "".join(chunks)
+            yield emit("Generation", "Completed", "Inbox summarized")
+
+            yield emit("Final Response", "Completed", "Done", {
+                "answer": answer,
+                "sources": sources,
+                "source_map": {str(i + 1): s for i, s in enumerate(sources)},
+            })
+            return
 
         # ─── AMBIGUOUS QUERY branch (Human-in-the-Loop) ───────────────────────
         if tool == "Ambiguous_Query":

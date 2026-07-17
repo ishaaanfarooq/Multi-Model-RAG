@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ImageViewer from "@/components/ImageViewer";
-import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon, CheckIcon, ChatIcon } from "@/components/icons";
+import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon, CheckIcon, ChatIcon, StopIcon } from "@/components/icons";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -93,6 +93,13 @@ export default function QueryPanel() {
   // id of the draft currently being sent/discarded, so we can disable its buttons
   const [resolvingAction, setResolvingAction] = useState<string | null>(null);
 
+  // Handles to the in-flight stream so Stop can actually cut the connection. Closing
+  // the stream also signals the backend to stop — its SSE generator bails out when it
+  // sees request.is_disconnected().
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const stoppedRef = useRef(false);
+
   useEffect(() => {
     setHasMounted(true);
     setMessages([
@@ -170,6 +177,29 @@ export default function QueryPanel() {
       timestamp: new Date(),
     }]);
   }, []);
+
+  // ─── Stop an in-flight request ───────────────────────────────────────
+  const stopProcessing = useCallback(() => {
+    stoppedRef.current = true;
+
+    // Text stream (GET/EventSource)
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+
+    // Image stream (POST/fetch) — abort cancels the reader loop
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+
+    // Keep whatever partial answer had streamed, but stop treating it as live.
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === "streaming-ai-msg" ? { ...m, id: `stopped-${Date.now()}` } : m
+      )
+    );
+    setIsProcessing(false);
+    setLiveStages([]);
+    appendSystemMessage("Stopped.");
+  }, [appendSystemMessage]);
 
   // ─── Attachment Logic ────────────────────────────────────────────
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -333,6 +363,7 @@ export default function QueryPanel() {
     const hasKnowledgeAttachments = selectedDocuments.length > 0 || attachedUrls.length > 0;
     if ((!query && !hasImages && !hasKnowledgeAttachments) || isProcessing) return;
 
+    stoppedRef.current = false;
     const imageFiles = [...selectedImages];
     const imagePreviewSnapshot = [...imagePreviews];
     const documentFiles = [...selectedDocuments];
@@ -415,9 +446,12 @@ export default function QueryPanel() {
       });
 
       // For POST+SSE we need to use fetch + ReadableStream
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
       fetch(`${API_BASE}/api/stream`, {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       }).then(async (response) => {
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
@@ -444,7 +478,10 @@ export default function QueryPanel() {
             }
           }
         }
-      }).catch(() => {
+        abortControllerRef.current = null;
+      }).catch((err) => {
+        // A user-initiated Stop aborts the fetch — that's expected, not an error.
+        if (err?.name === "AbortError" || stoppedRef.current) return;
         setMessages((prev) => [...prev, {
           id: (Date.now() + 2).toString(),
           role: "system",
@@ -459,6 +496,7 @@ export default function QueryPanel() {
       const eventSource = new EventSource(
         `${API_BASE}/api/stream?query=${encodeURIComponent(effectiveQuery)}&history=${encodeURIComponent(formatHistory())}&model_choice=${encodeURIComponent(modelChoice)}`
       );
+      eventSourceRef.current = eventSource;
 
       eventSource.onmessage = (event) => {
         try {
@@ -466,6 +504,7 @@ export default function QueryPanel() {
           const isFinal = handleSSEData(data);
           if (isFinal) {
             eventSource.close();
+            eventSourceRef.current = null;
           }
         } catch (err) {
           console.error("Critical SSE parse error:", err);
@@ -473,6 +512,10 @@ export default function QueryPanel() {
       };
 
       eventSource.onerror = () => {
+        eventSource.close();
+        eventSourceRef.current = null;
+        // If the user pressed Stop, we closed the stream on purpose — stay quiet.
+        if (stoppedRef.current) return;
         const errorMsg: Message = {
           id: (Date.now() + 2).toString(),
           role: "system",
@@ -482,7 +525,6 @@ export default function QueryPanel() {
         setMessages((prev) => [...prev, errorMsg]);
         setIsProcessing(false);
         setLiveStages([]);
-        eventSource.close();
       };
     }
   }, [input, isProcessing, selectedImages, imagePreviews, selectedDocuments, attachedUrls, modelChoice, messages, appendSystemMessage]);
@@ -679,10 +721,10 @@ export default function QueryPanel() {
                   Processing
                 </div>
                 <button
-                  onClick={() => setIsProcessing(false)}
+                  onClick={stopProcessing}
                   className="hidden group-hover:block absolute right-0 top-full mt-2 px-2 py-1 bg-brick-50 text-brick-700 text-[9px] font-bold rounded border border-brick-100 whitespace-nowrap shadow-sm z-50"
                 >
-                  Force Reset
+                  Stop
                 </button>
               </div>
            )}
@@ -1111,13 +1153,25 @@ export default function QueryPanel() {
               <MicIcon className="w-[18px] h-[18px]" />
             </button>
 
-            <button
-              type="submit"
-              disabled={!input.trim() && selectedImages.length === 0 && selectedDocuments.length === 0 && attachedUrls.length === 0}
-              className="btn-premium rounded-[20px] py-3 shadow-md flex-shrink-0"
-            >
-              {isProcessing ? "Sending…" : <><span>Send</span><SendIcon className="w-4 h-4" /></>}
-            </button>
+            {isProcessing ? (
+              <button
+                type="button"
+                onClick={stopProcessing}
+                title="Stop generating"
+                aria-label="Stop generating"
+                className="w-12 h-12 rounded-full bg-ink text-white flex items-center justify-center shadow-md flex-shrink-0 hover:bg-ink-light transition-colors"
+              >
+                <StopIcon className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim() && selectedImages.length === 0 && selectedDocuments.length === 0 && attachedUrls.length === 0}
+                className="btn-premium rounded-[20px] py-3 shadow-md flex-shrink-0"
+              >
+                <span>Send</span><SendIcon className="w-4 h-4" />
+              </button>
+            )}
           </form>
           <p className="text-[10px] font-semibold text-stone-500 text-center mt-4 uppercase tracking-[0.2em] opacity-50">
             Documents • Web crawl • Images • Voice • Inline citations

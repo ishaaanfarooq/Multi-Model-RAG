@@ -62,6 +62,12 @@ export const CheckIcon = ({ className = "w-5 h-5" }: IconProps) => (
   </svg>
 );
 
+export const StopIcon = ({ className = "w-5 h-5" }: IconProps) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <rect x="6" y="6" width="12" height="12" rx="2.5" />
+  </svg>
+);
+
 export const WarningIcon = ({ className = "w-5 h-5" }: IconProps) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 9v4M12 17h.01" />

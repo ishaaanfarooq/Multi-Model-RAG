@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon, CloseIcon } from "@/components/icons";
+import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon, CloseIcon, PanelLeftIcon } from "@/components/icons";
 import type { Conversation } from "@/lib/conversations";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
@@ -18,6 +18,7 @@ interface SidebarProps {
   onOpenChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, title: string) => void;
+  onCollapse: () => void;
 }
 
 const navItems: { id: ViewType; label: string; desc: string; Icon: typeof ChatIcon }[] = [
@@ -36,6 +37,7 @@ export default function Sidebar({
   onOpenChat,
   onDeleteChat,
   onRenameChat,
+  onCollapse,
 }: SidebarProps) {
   const [backendStatus, setBackendStatus] = useState<"online" | "offline" | "checking">("checking");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -75,10 +77,10 @@ export default function Sidebar({
       {/* Branding */}
       <div className="p-6 pb-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-brass-500 flex items-center justify-center text-white shadow-lg shadow-brass-900/10">
+          <div className="w-10 h-10 rounded-2xl bg-brass-500 flex items-center justify-center text-white shadow-lg shadow-brass-900/10 flex-shrink-0">
             <span className="font-serif font-semibold text-xl">P</span>
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="text-xl font-semibold tracking-tight text-ink font-heading leading-tight">
               Praxis
             </h1>
@@ -86,6 +88,14 @@ export default function Sidebar({
               Agentic RAG Workspace
             </p>
           </div>
+          <button
+            onClick={onCollapse}
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+            className="ml-auto flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-xl text-stone-400 hover:text-brass-600 hover:bg-cream-100 transition-colors"
+          >
+            <PanelLeftIcon className="w-[18px] h-[18px]" />
+          </button>
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon } from "@/components/icons";
+import { useEffect, useRef, useState } from "react";
+import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon, CloseIcon } from "@/components/icons";
+import type { Conversation } from "@/lib/conversations";
 
 export type ViewType = "chat" | "upload" | "crawl" | "pipeline";
 
@@ -10,6 +11,12 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 interface SidebarProps {
   activeView: ViewType;
   onViewChange: (view: ViewType) => void;
+  conversations: Conversation[];
+  activeConversationId: string | null;
+  onNewChat: () => void;
+  onOpenChat: (id: string) => void;
+  onDeleteChat: (id: string) => void;
+  onRenameChat: (id: string, title: string) => void;
 }
 
 const navItems: { id: ViewType; label: string; desc: string; Icon: typeof ChatIcon }[] = [
@@ -19,8 +26,20 @@ const navItems: { id: ViewType; label: string; desc: string; Icon: typeof ChatIc
   { id: "pipeline", label: "Pipeline", desc: "Watch retrieval in real time", Icon: PulseIcon },
 ];
 
-export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
+export default function Sidebar({
+  activeView,
+  onViewChange,
+  conversations,
+  activeConversationId,
+  onNewChat,
+  onOpenChat,
+  onDeleteChat,
+  onRenameChat,
+}: SidebarProps) {
   const [backendStatus, setBackendStatus] = useState<"online" | "offline" | "checking">("checking");
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -36,10 +55,23 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (renamingId) renameInputRef.current?.focus();
+  }, [renamingId]);
+
+  const startRename = (c: Conversation) => {
+    setRenamingId(c.id);
+    setRenameDraft(c.title);
+  };
+  const commitRename = () => {
+    if (renamingId) onRenameChat(renamingId, renameDraft);
+    setRenamingId(null);
+  };
+
   return (
     <aside className="w-[280px] h-screen flex flex-col bg-white border-r border-cream-300 flex-shrink-0">
       {/* Branding */}
-      <div className="p-8 pb-4">
+      <div className="p-6 pb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-brass-500 flex items-center justify-center text-white shadow-lg shadow-brass-900/10">
             <span className="font-serif font-semibold text-xl">M</span>
@@ -55,9 +87,20 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         </div>
       </div>
 
+      {/* New chat */}
+      <div className="px-4 pt-1 pb-2">
+        <button
+          onClick={onNewChat}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-brass-500 text-white text-sm font-semibold shadow-sm hover:bg-brass-600 transition-colors"
+        >
+          <span className="text-lg leading-none -mt-0.5">＋</span>
+          New chat
+        </button>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-1.5">
-        <p className="px-4 text-[10px] font-semibold text-stone-500 uppercase tracking-[0.14em] mb-3">Workspace</p>
+      <nav className="px-4 py-2 space-y-1">
+        <p className="px-4 text-[10px] font-semibold text-stone-500 uppercase tracking-[0.14em] mb-2">Workspace</p>
         {navItems.map((item) => {
           const isActive = activeView === item.id;
           const { Icon } = item;
@@ -66,7 +109,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
               key={item.id}
               onClick={() => onViewChange(item.id)}
               className={`
-                w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl text-left transition-all duration-200 group
+                w-full flex items-center gap-3.5 px-4 py-2.5 rounded-2xl text-left transition-all duration-200 group
                 ${
                   isActive
                     ? "bg-cream-100 border border-cream-300 text-ink"
@@ -75,16 +118,15 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
               `}
             >
               <div className={`
-                w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0
+                w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 flex-shrink-0
                 ${isActive ? "bg-brass-500 text-white shadow-sm" : "bg-cream-100 text-stone-500 group-hover:text-brass-600"}
               `}>
-                <Icon className="w-[18px] h-[18px]" />
+                <Icon className="w-[16px] h-[16px]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className={`text-sm font-semibold transition-colors duration-200 ${isActive ? "text-ink" : ""}`}>
+                <div className={`text-[13px] font-semibold transition-colors duration-200 ${isActive ? "text-ink" : ""}`}>
                   {item.label}
                 </div>
-                <div className="text-[11px] opacity-60 font-medium truncate">{item.desc}</div>
               </div>
               {isActive && <div className="w-1.5 h-1.5 rounded-full bg-brass-500 flex-shrink-0" />}
             </button>
@@ -92,9 +134,72 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
         })}
       </nav>
 
+      {/* Chat history */}
+      <div className="flex-1 min-h-0 flex flex-col px-4 pt-3">
+        <p className="px-4 text-[10px] font-semibold text-stone-500 uppercase tracking-[0.14em] mb-2 flex-shrink-0">
+          Chat history
+        </p>
+        <div className="flex-1 overflow-y-auto space-y-0.5 pr-1">
+          {conversations.length === 0 ? (
+            <p className="px-4 py-2 text-[11px] text-stone-400 italic">No saved chats yet</p>
+          ) : (
+            conversations.map((c) => {
+              const isActive = c.id === activeConversationId && activeView === "chat";
+              const isRenaming = renamingId === c.id;
+              return (
+                <div
+                  key={c.id}
+                  className={`group flex items-center gap-1 rounded-xl transition-colors ${
+                    isActive ? "bg-cream-100 border border-cream-300" : "border border-transparent hover:bg-cream-50"
+                  }`}
+                >
+                  {isRenaming ? (
+                    <input
+                      ref={renameInputRef}
+                      value={renameDraft}
+                      onChange={(e) => setRenameDraft(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenamingId(null);
+                      }}
+                      className="flex-1 min-w-0 bg-white border border-brass-300 rounded-lg px-2.5 py-1.5 text-[13px] text-ink outline-none mx-1 my-0.5"
+                    />
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => onOpenChat(c.id)}
+                        onDoubleClick={() => startRename(c)}
+                        title={c.title}
+                        className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2 text-left"
+                      >
+                        <ChatIcon className={`w-3.5 h-3.5 flex-shrink-0 ${isActive ? "text-brass-600" : "text-stone-400"}`} />
+                        <span className={`truncate text-[13px] font-medium ${isActive ? "text-ink" : "text-stone-600"}`}>
+                          {c.title}
+                        </span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete "${c.title}"?`)) onDeleteChat(c.id);
+                        }}
+                        title="Delete chat"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-stone-400 hover:text-brick-600 hover:bg-brick-50 mr-1"
+                      >
+                        <CloseIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
       {/* System Status */}
-      <div className="p-6 pt-2">
-        <div className="p-4 rounded-2xl bg-cream-50 border border-cream-300">
+      <div className="p-4 pt-2 flex-shrink-0">
+        <div className="p-3.5 rounded-2xl bg-cream-50 border border-cream-300">
           <div className="flex flex-col gap-2.5">
             <div className="flex items-center justify-between px-1">
               <span className="text-[11px] font-semibold text-stone-500">Backend</span>
@@ -124,7 +229,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             </div>
           </div>
         </div>
-        <p className="text-center text-[10px] text-stone-500 mt-4 opacity-60 font-medium">© 2026 MultiModel RAG</p>
       </div>
     </aside>
   );

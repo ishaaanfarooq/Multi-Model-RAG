@@ -6,13 +6,34 @@ import QueryPanel from "@/components/QueryPanel";
 import IngestPanel from "@/components/IngestPanel";
 import CrawlPanel from "@/components/CrawlPanel";
 import PipelineVisualizer from "@/components/PipelineVisualizer";
+import { useConversations } from "@/lib/conversations";
 
 export default function UnifiedPage() {
   const [activeView, setActiveView] = useState<ViewType>("chat");
+  const chats = useConversations();
+
+  // Clicking a saved conversation (or New chat) also brings the chat view forward.
+  const openChat = (id: string) => {
+    chats.switchTo(id);
+    setActiveView("chat");
+  };
+  const startNewChat = () => {
+    chats.newChat();
+    setActiveView("chat");
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-cream-100">
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      <Sidebar
+        activeView={activeView}
+        onViewChange={setActiveView}
+        conversations={chats.conversations}
+        activeConversationId={chats.activeId}
+        onNewChat={startNewChat}
+        onOpenChat={openChat}
+        onDeleteChat={chats.deleteChat}
+        onRenameChat={chats.renameChat}
+      />
 
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
         <div className="absolute inset-0 pointer-events-none opacity-[0.4] bg-[radial-gradient(#D2C3A5_1px,transparent_1px)] [background-size:26px_26px]" />
@@ -20,7 +41,13 @@ export default function UnifiedPage() {
         <div className="relative flex-1 flex flex-col min-h-0 p-6 lg:p-8 z-10">
           <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0 structural-card overflow-hidden">
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-white">
-              {activeView === "chat" && <QueryPanel />}
+              {activeView === "chat" && (
+                <QueryPanel
+                  messages={chats.activeMessages}
+                  setMessages={chats.setActiveMessages}
+                  conversationId={chats.activeId}
+                />
+              )}
               {activeView === "upload" && <IngestPanel />}
               {activeView === "crawl" && <CrawlPanel />}
               {activeView === "pipeline" && <PipelineVisualizer />}

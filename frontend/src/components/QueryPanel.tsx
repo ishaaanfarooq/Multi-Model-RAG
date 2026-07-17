@@ -5,46 +5,19 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import ImageViewer from "@/components/ImageViewer";
 import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon, CheckIcon, ChatIcon, StopIcon } from "@/components/icons";
+import type { Message, PipelineStage } from "@/lib/conversations";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
-type PendingAction = {
-  id: string;
-  kind: "email" | "whatsapp";
-  payload: {
-    recipient_name: string;
-    to: string;
-    subject?: string;
-    body: string;
-  };
-  status: string;
-};
+type SetMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => void;
 
-type Message = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  sources?: string[];
-  source_map?: Record<string, string>;
-  chart?: string;
-  warning?: string;
-  timestamp: Date;
-  pipeline?: PipelineStage[];
-  images?: string[]; // base64 previews of uploaded images
-  documents?: string[];
-  urls?: string[];
-  // A drafted email/WhatsApp awaiting the user's approval. Nothing is sent until
-  // they press Approve — the backend only ever hands us a draft.
-  pendingAction?: PendingAction;
-  actionOutcome?: { status: "sent" | "rejected" | "failed"; detail?: string };
-};
-
-type PipelineStage = {
-  model: string;
-  status: string;
-  action: string;
-  details?: any;
-};
+interface QueryPanelProps {
+  // Chat state is owned by the conversation store in the parent so it can be
+  // persisted and switched between conversations.
+  messages: Message[];
+  setMessages: SetMessages;
+  conversationId: string | null;
+}
 
 // Moving StageDisplay outside the component to prevent re-creation on every render
 const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
@@ -63,9 +36,8 @@ const StageDisplay = ({ stages }: { stages: PipelineStage[] }) => (
   </div>
 );
 
-export default function QueryPanel() {
+export default function QueryPanel({ messages, setMessages, conversationId }: QueryPanelProps) {
   const [hasMounted, setHasMounted] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveStages, setLiveStages] = useState<PipelineStage[]>([]);
@@ -102,16 +74,25 @@ export default function QueryPanel() {
 
   useEffect(() => {
     setHasMounted(true);
-    setMessages([
-      {
-        id: "welcome",
-        role: "system",
-        content:
-          "Welcome. Upload a document, crawl a website, or attach an image to begin — then ask a question about it. Voice input is available too.",
-        timestamp: new Date(),
-      },
-    ]);
   }, []);
+
+  // Switching conversations: stop any in-flight stream and clear transient UI so a
+  // new/other chat doesn't inherit the previous one's processing state or attachments.
+  useEffect(() => {
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    stoppedRef.current = true;
+    setIsProcessing(false);
+    setLiveStages([]);
+    setInput("");
+    clearImage();
+    clearDocument();
+    clearUrlAttachment();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -176,7 +157,7 @@ export default function QueryPanel() {
       content,
       timestamp: new Date(),
     }]);
-  }, []);
+  }, [setMessages]);
 
   // ─── Stop an in-flight request ───────────────────────────────────────
   const stopProcessing = useCallback(() => {
@@ -199,7 +180,7 @@ export default function QueryPanel() {
     setIsProcessing(false);
     setLiveStages([]);
     appendSystemMessage("Stopped.");
-  }, [appendSystemMessage]);
+  }, [appendSystemMessage, setMessages]);
 
   // ─── Attachment Logic ────────────────────────────────────────────
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -316,7 +297,7 @@ export default function QueryPanel() {
     } finally {
       setResolvingAction(null);
     }
-  }, []);
+  }, [setMessages]);
 
   const formatHistory = () => {
     return messages
@@ -527,7 +508,7 @@ export default function QueryPanel() {
         setLiveStages([]);
       };
     }
-  }, [input, isProcessing, selectedImages, imagePreviews, selectedDocuments, attachedUrls, modelChoice, messages, appendSystemMessage]);
+  }, [input, isProcessing, selectedImages, imagePreviews, selectedDocuments, attachedUrls, modelChoice, messages, appendSystemMessage, setMessages]);
 
   // Shared SSE data handler — returns true if the stream is finished (final or failed)
   const handleSSEData = (data: any): boolean => {

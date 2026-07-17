@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon, CloseIcon } from "@/components/icons";
 import type { Conversation } from "@/lib/conversations";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 export type ViewType = "chat" | "upload" | "crawl" | "pipeline";
 
@@ -40,6 +41,7 @@ export default function Sidebar({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -181,7 +183,7 @@ export default function Sidebar({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Delete "${c.title}"?`)) onDeleteChat(c.id);
+                          setDeleteTarget(c);
                         }}
                         title="Delete chat"
                         className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-stone-400 hover:text-brick-600 hover:bg-brick-50 mr-1"
@@ -230,6 +232,25 @@ export default function Sidebar({
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        destructive
+        title="Delete chat?"
+        message={
+          <>
+            <span className="font-semibold text-ink">“{deleteTarget?.title}”</span> and its
+            messages will be permanently removed. This can’t be undone.
+          </>
+        }
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (deleteTarget) onDeleteChat(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </aside>
   );
 }

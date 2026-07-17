@@ -76,14 +76,14 @@ export default function Sidebar({
       <div className="p-6 pb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-brass-500 flex items-center justify-center text-white shadow-lg shadow-brass-900/10">
-            <span className="font-serif font-semibold text-xl">M</span>
+            <span className="font-serif font-semibold text-xl">P</span>
           </div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight text-ink font-heading leading-tight">
-              MultiModel RAG
+            <h1 className="text-xl font-semibold tracking-tight text-ink font-heading leading-tight">
+              Praxis
             </h1>
             <p className="text-[10px] font-semibold text-brass-600 uppercase tracking-[0.18em] opacity-90">
-              Research Workspace
+              Agentic RAG Workspace
             </p>
           </div>
         </div>

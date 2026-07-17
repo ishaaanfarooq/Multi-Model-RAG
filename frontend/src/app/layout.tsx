@@ -1,10 +1,10 @@
-// Root layout for the Multi-Model RAG frontend application - v1.4.3-stable
+// Root layout for the Praxis frontend application
 import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MultiModel RAG | Research Workspace",
-  description: "A multi-model retrieval-augmented generation workspace for documents, web sources, and images.",
+  title: "Praxis | Agentic RAG Workspace",
+  description: "Praxis — a multi-model, multi-agent RAG workspace that retrieves, verifies, and acts on documents, web sources, images, email, and messaging.",
 };
 
 export default function RootLayout({

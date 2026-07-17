@@ -61,7 +61,7 @@ export default function UnifiedPage() {
                 Local Environment Ready
               </span>
               <span className="opacity-40">|</span>
-              <span>MultiModel RAG Framework</span>
+              <span>Praxis · Multi-Model Agentic RAG</span>
             </div>
             <div className="text-[10px] text-stone-500 italic opacity-60">
               Runs entirely on your local infrastructure

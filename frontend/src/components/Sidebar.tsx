@@ -84,8 +84,8 @@ export default function Sidebar({
             <h1 className="text-xl font-semibold tracking-tight text-ink font-heading leading-tight">
               Praxis
             </h1>
-            <p className="text-[10px] font-semibold text-brass-600 uppercase tracking-[0.18em] opacity-90">
-              Agentic RAG Workspace
+            <p className="text-[10px] font-semibold text-brass-600 uppercase tracking-[0.14em] opacity-90 whitespace-nowrap">
+              Agentic Workspace
             </p>
           </div>
           <button

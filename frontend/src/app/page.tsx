@@ -8,6 +8,7 @@ import CrawlPanel from "@/components/CrawlPanel";
 import PipelineVisualizer from "@/components/PipelineVisualizer";
 import { useConversations } from "@/lib/conversations";
 import { PanelLeftIcon } from "@/components/icons";
+import VantaBackground from "@/components/VantaBackground";
 
 const SIDEBAR_KEY = "mmrag.sidebarCollapsed";
 
@@ -79,7 +80,7 @@ export default function UnifiedPage() {
           </button>
         )}
 
-        <div className="absolute inset-0 pointer-events-none opacity-[0.4] bg-[radial-gradient(#D2C3A5_1px,transparent_1px)] [background-size:26px_26px]" />
+        <VantaBackground />
 
         <div className="relative flex-1 flex flex-col min-h-0 p-6 lg:p-8 z-10">
           <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0 structural-card overflow-hidden">

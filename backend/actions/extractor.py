@@ -75,7 +75,11 @@ User instruction: "{query}"
 JSON:"""
 
 
-TELEGRAM_PROMPT = """You extract the fields of a Telegram message the user has asked to send.
+TELEGRAM_PROMPT = """You extract the fields of a message the user has asked to send.
+
+All chat messages are delivered via Telegram. The user may say "telegram", "text",
+"message", "dm", or even "whatsapp" — treat them all the same; they just mean send a
+message to the named person.
 
 You will be given ONLY the user's own instruction and their address book. You are not
 given any documents, web pages, or search results, and you must not invent any.
@@ -86,7 +90,8 @@ Address book (the ONLY people who can be messaged):
 Rules:
 1. "recipient" MUST be a name copied exactly from the address book above, and that
    contact must have telegram. If not found, set "recipient" to null.
-2. Write "body" as a short, conversational Telegram message (1-3 sentences).
+2. Write "body" as a short, conversational message (1-3 sentences). Do not put the
+   recipient's name inside the body.
 3. Output ONLY a JSON object. No markdown fence, no commentary.
 
 Schema:

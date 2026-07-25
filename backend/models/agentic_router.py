@@ -24,11 +24,10 @@ class AgentRouter:
 2. "Web_Search": Choose this if the user is asking for live or real-time information, facts about public entities, or general world knowledge that a search engine would answer.
 3. "Vision_Analysis": Choose this if the user is asking about an image, a picture, a screenshot, or specifically mentions "the image", "what's in the photo", or "read this text" (referring to an uploaded file).
 4. "Send_Email": Choose this if the user is INSTRUCTING you to send/write/compose/draft an email or mail to someone (e.g. "email Ali about the meeting", "send a mail to my supervisor").
-5. "Send_WhatsApp": Choose this if the user is INSTRUCTING you to send a WhatsApp/text message to someone (e.g. "whatsapp Ali that I'll be late", "text mom").
-6. "Send_Telegram": Choose this if the user is INSTRUCTING you to send a Telegram message to someone (e.g. "telegram Ali the notes", "send a telegram to mom").
-7. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
-8. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
-9. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
+5. "Send_Telegram": Choose this if the user is INSTRUCTING you to send a message/text/WhatsApp/Telegram to someone (e.g. "message Ali", "text mom", "telegram Ali the notes", "whatsapp Ali that I'll be late"). All chat/message sends go here.
+6. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
+7. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
+8. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
 
 Note the difference: sending mail is "Send_Email", but asking about mail you received is "Read_Email".
 
@@ -47,11 +46,20 @@ Tool Selection:'''
             prompt = self.prompt_template.format(query=query)
             response = self.llm.invoke(prompt, model_choice=model_choice).strip()
 
+            # WhatsApp is disabled — but the model still knows the word and may emit the
+            # old "Send_WhatsApp" token. Treat any WhatsApp classification as Telegram
+            # so a "whatsapp X" request drafts a Telegram message instead of falling
+            # through to search.
+            if "Send_WhatsApp" in response or "WhatsApp" in response:
+                return "Send_Telegram"
+
             # Order matters: the action tools are checked first, and the more specific
             # name wins ("Send_Email"/"Read_Email" both contain "Email").
             for tool in (
                 "Send_Email",
-                "Send_WhatsApp",
+                # WhatsApp is disabled for now — any "whatsapp/text/message" phrasing is
+                # mapped to Send_Telegram in the prompt above. Kept out of the parse list
+                # so it can never be selected; re-add it here to bring WhatsApp back.
                 "Send_Telegram",
                 "Read_Email",
                 "Ambiguous_Query",

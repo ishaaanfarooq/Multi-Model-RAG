@@ -18,6 +18,7 @@ from actions.registry import ActionRegistry
 from actions.extractor import ActionExtractor, scan_for_injection
 from actions.gmail_client import GmailClient
 from actions.whatsapp_client import WhatsAppClient
+from actions.telegram_client import TelegramClient
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,7 @@ class MasterOrchestrator:
         self.extractor = ActionExtractor(self.generator.llm, self.contacts)
         self.gmail = GmailClient()
         self.whatsapp = WhatsAppClient()
+        self.telegram = TelegramClient()
 
     async def process_query_stream(self, query: str, history: str = "", image_context: str = "", model_choice: str = "auto") -> AsyncGenerator[str, None]:
         """
@@ -219,10 +221,13 @@ Rewritten:"""
         # never `search_query`, which by this point may carry text lifted from a crawled
         # page or an uploaded image. Second, the recipient must resolve to a saved
         # contact. Nothing here sends: it produces a draft for a human to approve.
-        if tool in ("Send_Email", "Send_WhatsApp"):
-            kind = "email" if tool == "Send_Email" else "whatsapp"
-            client = self.gmail if kind == "email" else self.whatsapp
-            label = "Email Agent" if kind == "email" else "WhatsApp Agent"
+        if tool in ("Send_Email", "Send_WhatsApp", "Send_Telegram"):
+            channel = {
+                "Send_Email": ("email", self.gmail, "Email Agent", self.extractor.extract_email),
+                "Send_WhatsApp": ("whatsapp", self.whatsapp, "WhatsApp Agent", self.extractor.extract_whatsapp),
+                "Send_Telegram": ("telegram", self.telegram, "Telegram Agent", self.extractor.extract_telegram),
+            }
+            kind, client, label, extract = channel[tool]
 
             if not client.available:
                 reason = client._init_error or f"{kind} is not configured."
@@ -236,10 +241,7 @@ Rewritten:"""
 
             yield emit(label, "Processing", f"Composing {kind} from your instruction (contacts allowlist enforced)")
             try:
-                if kind == "email":
-                    payload = await asyncio.to_thread(self.extractor.extract_email, query, model_choice)
-                else:
-                    payload = await asyncio.to_thread(self.extractor.extract_whatsapp, query, model_choice)
+                payload = await asyncio.to_thread(extract, query, model_choice)
             except LookupError as e:
                 # Recipient not on the allowlist. This is the defense doing its job, so
                 # record it — a blocked send is exactly the evidence worth reporting.

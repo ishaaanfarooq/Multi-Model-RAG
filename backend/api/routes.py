@@ -29,6 +29,7 @@ class ContactRequest(BaseModel):
     name: str
     email: str | None = None
     phone: str | None = None
+    telegram: str | None = None
 
 # Global instances
 orchestrator = MasterOrchestrator()
@@ -137,7 +138,7 @@ def list_contacts():
 @router.post("/contacts")
 def upsert_contact(req: ContactRequest):
     try:
-        contact = orchestrator.contacts.upsert(req.name, req.email, req.phone)
+        contact = orchestrator.contacts.upsert(req.name, req.email, req.phone, req.telegram)
         return {"status": "saved", "contact": contact}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -148,6 +149,20 @@ def delete_contact(name: str):
     if orchestrator.contacts.delete(name):
         return {"status": "deleted", "name": name}
     raise HTTPException(status_code=404, detail=f"No contact named '{name}'.")
+
+
+@router.get("/telegram/chats")
+def telegram_chats():
+    """
+    Discovery helper: list everyone who has recently messaged the bot, with their
+    chat_id — so you can save them as a contact without hunting through the API.
+    """
+    if not orchestrator.telegram.available:
+        raise HTTPException(status_code=400, detail=orchestrator.telegram._init_error)
+    try:
+        return {"chats": orchestrator.telegram.recent_chats(), "bot": orchestrator.telegram.bot_username}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 # ─── Actions: approve / reject a draft ────────────────────────────────────────
@@ -193,6 +208,18 @@ def approve_action(action_id: str):
             orchestrator.actions.resolve(action_id, "failed", str(e))
             raise HTTPException(status_code=502, detail=str(e))
 
+    if kind == "telegram":
+        if not orchestrator.contacts.is_allowed_telegram(payload["to"]):
+            orchestrator.actions.resolve(action_id, "failed", "Recipient is not a saved contact.")
+            raise HTTPException(status_code=403, detail="That recipient is not a saved contact.")
+        try:
+            msg_id = orchestrator.telegram.send(payload["to"], payload["body"])
+            resolved = orchestrator.actions.resolve(action_id, "sent", msg_id)
+            return {"status": "sent", "action": resolved}
+        except Exception as e:
+            orchestrator.actions.resolve(action_id, "failed", str(e))
+            raise HTTPException(status_code=502, detail=str(e))
+
     raise HTTPException(status_code=400, detail=f"Unknown action kind '{kind}'.")
 
 
@@ -221,6 +248,11 @@ def integrations_status():
         "whatsapp": {
             "available": orchestrator.whatsapp.available,
             "error": orchestrator.whatsapp._init_error,
+        },
+        "telegram": {
+            "available": orchestrator.telegram.available,
+            "bot": orchestrator.telegram.bot_username,
+            "error": orchestrator.telegram._init_error,
         },
         "contacts": len(orchestrator.contacts.contacts),
     }

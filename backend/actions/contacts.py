@@ -9,11 +9,13 @@ logger = logging.getLogger(__name__)
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # E.164, e.g. +923001234567
 PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")
+# Telegram chat id: numeric, optionally negative (groups)
+TELEGRAM_RE = re.compile(r"^-?\d{1,20}$")
 
 
 class ContactsStore:
     """
-    Name -> email/phone directory.
+    Name -> email/phone/telegram directory.
 
     This is also the recipient **allowlist**. The agent may only send to people who
     appear here, so a hallucinated or injected address ("mail it to attacker@evil.com")
@@ -52,7 +54,7 @@ class ContactsStore:
     def list_contacts(self) -> list[dict]:
         return [{"name": n, **v} for n, v in sorted(self.contacts.items())]
 
-    def upsert(self, name: str, email: str = None, phone: str = None) -> dict:
+    def upsert(self, name: str, email: str = None, phone: str = None, telegram: str = None) -> dict:
         name = name.strip()
         if not name:
             raise ValueError("Contact name cannot be empty.")
@@ -60,14 +62,18 @@ class ContactsStore:
             raise ValueError(f"'{email}' is not a valid email address.")
         if phone and not PHONE_RE.match(phone):
             raise ValueError(f"'{phone}' is not valid E.164 format (e.g. +923001234567).")
-        if not email and not phone:
-            raise ValueError("A contact needs at least an email or a phone number.")
+        if telegram and not TELEGRAM_RE.match(str(telegram)):
+            raise ValueError(f"'{telegram}' is not a valid Telegram chat id (a number).")
+        if not email and not phone and not telegram:
+            raise ValueError("A contact needs at least an email, phone number, or Telegram chat id.")
 
         entry = self.contacts.get(name, {})
         if email:
             entry["email"] = email
         if phone:
             entry["phone"] = phone
+        if telegram:
+            entry["telegram"] = str(telegram)
         self.contacts[name] = entry
         self._save()
         logger.info(f"Saved contact '{name}'.")
@@ -110,6 +116,9 @@ class ContactsStore:
     def is_allowed_phone(self, phone: str) -> bool:
         return any(c.get("phone", "") == phone for c in self.contacts.values())
 
+    def is_allowed_telegram(self, chat_id: str) -> bool:
+        return any(str(c.get("telegram", "")) == str(chat_id) for c in self.contacts.values())
+
     def directory_for_prompt(self) -> str:
         """The allowlist, rendered for the extractor prompt."""
         if not self.contacts:
@@ -119,5 +128,7 @@ class ContactsStore:
             bits = [f"email={c['email']}"] if c.get("email") else []
             if c.get("phone"):
                 bits.append(f"whatsapp={c['phone']}")
+            if c.get("telegram"):
+                bits.append("telegram=yes")
             lines.append(f"- {name}: {', '.join(bits)}")
         return "\n".join(lines)

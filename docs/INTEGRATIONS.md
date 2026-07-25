@@ -81,7 +81,43 @@ curl -s localhost:8000/api/integrations/status
 
 ---
 
-## 2. WhatsApp (Twilio Sandbox)
+## 2. Telegram (recommended — free, no session window)
+
+Telegram is the easiest channel to demo: it's free, needs no SDK, and has none of
+WhatsApp's 24-hour session limit. The only rule is that a person must press **Start**
+on your bot once before it can message them.
+
+### Setup (2 minutes)
+
+1. On Telegram, open **@BotFather** → send `/newbot` → follow the prompts (pick a name
+   and a username ending in `bot`).
+2. BotFather replies with a **token** like `123456789:AAH...`. Put it in `.env`:
+   ```bash
+   TELEGRAM_BOT_TOKEN=123456789:AAH...
+   ```
+3. `docker compose up -d backend`, then check `curl localhost:8000/api/integrations/status`
+   — `telegram.available` should be `true` and it shows your bot's `@username`.
+
+### Find a chat_id (recipients are addressed by numeric id, not phone)
+
+1. On Telegram, open your new bot and press **Start** (send it any message).
+2. `curl localhost:8000/api/telegram/chats` — this lists everyone who has messaged the
+   bot, with their `chat_id` and name.
+3. Save them as a contact:
+   ```bash
+   curl -X POST localhost:8000/api/contacts \
+     -H 'Content-Type: application/json' \
+     -d '{"name":"Bilal","telegram":"123456789"}'
+   ```
+
+Now: *"send a telegram to Bilal about the meeting"* → draft card → Approve.
+
+> A send fails cleanly with "they haven't started the bot yet" if the recipient never
+> pressed Start — that's Telegram's opt-in rule, not a bug.
+
+---
+
+## 3. WhatsApp (Twilio Sandbox)
 
 ### Important: WhatsApp does not let you message strangers
 

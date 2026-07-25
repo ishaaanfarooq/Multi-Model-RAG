@@ -25,9 +25,10 @@ class AgentRouter:
 3. "Vision_Analysis": Choose this if the user is asking about an image, a picture, a screenshot, or specifically mentions "the image", "what's in the photo", or "read this text" (referring to an uploaded file).
 4. "Send_Email": Choose this if the user is INSTRUCTING you to send/write/compose/draft an email or mail to someone (e.g. "email Ali about the meeting", "send a mail to my supervisor").
 5. "Send_WhatsApp": Choose this if the user is INSTRUCTING you to send a WhatsApp/text message to someone (e.g. "whatsapp Ali that I'll be late", "text mom").
-6. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
-7. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
-8. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
+6. "Send_Telegram": Choose this if the user is INSTRUCTING you to send a Telegram message to someone (e.g. "telegram Ali the notes", "send a telegram to mom").
+7. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
+8. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
+9. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
 
 Note the difference: sending mail is "Send_Email", but asking about mail you received is "Read_Email".
 
@@ -51,6 +52,7 @@ Tool Selection:'''
             for tool in (
                 "Send_Email",
                 "Send_WhatsApp",
+                "Send_Telegram",
                 "Read_Email",
                 "Ambiguous_Query",
                 "Vision_Analysis",

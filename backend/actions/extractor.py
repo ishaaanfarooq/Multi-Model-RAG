@@ -75,6 +75,28 @@ User instruction: "{query}"
 JSON:"""
 
 
+TELEGRAM_PROMPT = """You extract the fields of a Telegram message the user has asked to send.
+
+You will be given ONLY the user's own instruction and their address book. You are not
+given any documents, web pages, or search results, and you must not invent any.
+
+Address book (the ONLY people who can be messaged):
+{directory}
+
+Rules:
+1. "recipient" MUST be a name copied exactly from the address book above, and that
+   contact must have telegram. If not found, set "recipient" to null.
+2. Write "body" as a short, conversational Telegram message (1-3 sentences).
+3. Output ONLY a JSON object. No markdown fence, no commentary.
+
+Schema:
+{{"recipient": "<name from address book or null>", "body": "<string>"}}
+
+User instruction: "{query}"
+
+JSON:"""
+
+
 def _parse_json(raw: str) -> dict:
     """LLMs like to wrap JSON in prose or fences. Dig it out."""
     text = re.sub(r"```(?:json)?|```", "", raw).strip()
@@ -161,5 +183,33 @@ class ActionExtractor:
         return {
             "recipient_name": contact["name"],
             "to": contact["phone"],
+            "body": body,
+        }
+
+    def extract_telegram(self, query: str, model_choice: str = "auto") -> dict:
+        prompt = TELEGRAM_PROMPT.format(
+            directory=self.contacts.directory_for_prompt(), query=query
+        )
+        data = _parse_json(self.llm.invoke(prompt, model_choice=model_choice))
+
+        name = data.get("recipient")
+        body = (data.get("body") or "").strip()
+
+        if not name:
+            raise LookupError(
+                "I couldn't match that person to anyone in your contacts. "
+                "Add them (with a Telegram chat id) under Contacts first."
+            )
+
+        contact = self.contacts.resolve(name)
+        if not contact or not contact.get("telegram"):
+            raise LookupError(
+                f"'{name}' isn't a saved contact with a Telegram chat id. "
+                "Add them under Contacts first."
+            )
+
+        return {
+            "recipient_name": contact["name"],
+            "to": contact["telegram"],
             "body": body,
         }

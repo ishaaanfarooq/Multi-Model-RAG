@@ -12,7 +12,7 @@ export type PipelineStage = {
 
 export type PendingAction = {
   id: string;
-  kind: "email" | "whatsapp";
+  kind: "email" | "whatsapp" | "telegram";
   payload: {
     recipient_name: string;
     to: string;

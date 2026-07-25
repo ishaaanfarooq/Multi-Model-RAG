@@ -31,6 +31,7 @@ def contacts():
     store = ContactsStore(path=path)
     store.upsert("Ali", email="ali@example.com", phone="+923001234567")
     store.upsert("Supervisor", email="supervisor@university.edu")
+    store.upsert("Bilal", telegram="123456789")
     yield store
     os.unlink(path)
 
@@ -107,6 +108,29 @@ def test_resolved_address_comes_from_the_store_not_the_model(contacts):
     action = extractor.extract_email("email Ali the report")
     assert action["to"] == "ali@example.com"  # from the store
     assert action["recipient_name"] == "Ali"
+
+
+# ── Telegram (same allowlist guarantees) ──────────────────────────────────────
+
+def test_telegram_resolves_chat_id_from_store(contacts):
+    llm = FakeLLM('{"recipient": "Bilal", "body": "hi"}')
+    extractor = ActionExtractor(llm, contacts)
+    action = extractor.extract_telegram("telegram Bilal hello")
+    assert action["to"] == "123456789"  # chat_id from the store
+    assert action["recipient_name"] == "Bilal"
+
+
+def test_telegram_rejects_contact_without_telegram(contacts):
+    """Ali has email/phone but no telegram — must not resolve for a telegram send."""
+    llm = FakeLLM('{"recipient": "Ali", "body": "hi"}')
+    extractor = ActionExtractor(llm, contacts)
+    with pytest.raises(LookupError):
+        extractor.extract_telegram("telegram Ali hello")
+
+
+def test_telegram_allowlist_blocks_unknown_chat_id(contacts):
+    assert contacts.is_allowed_telegram("123456789") is True
+    assert contacts.is_allowed_telegram("999999999") is False
 
 
 # ── 2. Injection detection ────────────────────────────────────────────────────

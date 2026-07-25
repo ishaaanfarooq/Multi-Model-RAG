@@ -785,7 +785,12 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
                         <ChatIcon className="w-4 h-4 text-brass-700" />
                       )}
                       <span className="text-[11px] font-semibold uppercase tracking-widest text-brass-800">
-                        {msg.pendingAction.kind === "email" ? "Draft email" : "Draft WhatsApp"} · not sent
+                        {msg.pendingAction.kind === "email"
+                          ? "Draft email"
+                          : msg.pendingAction.kind === "telegram"
+                          ? "Draft Telegram"
+                          : "Draft WhatsApp"}{" "}
+                        · not sent
                       </span>
                     </div>
 

@@ -102,6 +102,48 @@ User instruction: "{query}"
 JSON:"""
 
 
+# A delimited format (not JSON) — code with quotes/newlines is fragile to JSON-escape,
+# especially for small local models, so we keep filename and body as plain text.
+FILE_TASK_PROMPT = """You are a coding assistant that produces a single file.
+
+The user has asked you to create/write a file, and may have described a problem to solve.
+Produce the complete file. If they described a task, fully solve it in correct, working code.
+
+Output EXACTLY this format and nothing else:
+FILENAME: <relative filename with extension, e.g. solve.py or src/app.js>
+CONTENT:
+<the complete raw file body>
+
+Rules:
+- FILENAME is a plain relative path (no leading slash, no ".."). If the user gave a name, use it; otherwise pick a sensible one.
+- CONTENT is the raw file content only. Do NOT wrap it in markdown fences. Do NOT add any explanation before or after.
+
+User instruction: "{query}"
+"""
+
+
+def _parse_file_task(raw: str) -> dict:
+    text = raw.strip()
+
+    m = re.search(r"FILENAME:\s*(.+)", text)
+    if not m:
+        raise ValueError(f"Model did not return a FILENAME. Got: {raw[:200]}")
+    filename = m.group(1).splitlines()[0].strip().strip("`\"'")
+
+    idx = text.find("CONTENT:")
+    content = text[idx + len("CONTENT:") :] if idx != -1 else text[m.end():]
+    content = content.strip("\n")
+
+    # Strip a stray surrounding code fence if the model added one anyway.
+    content = re.sub(r"^```[a-zA-Z0-9_+-]*\n", "", content)
+    content = re.sub(r"\n```\s*$", "", content)
+
+    filename = filename.lstrip("/\\")
+    if not filename:
+        raise ValueError("Model did not produce a usable filename.")
+    return {"path": filename, "content": content}
+
+
 def _parse_json(raw: str) -> dict:
     """LLMs like to wrap JSON in prose or fences. Dig it out."""
     text = re.sub(r"```(?:json)?|```", "", raw).strip()
@@ -218,3 +260,13 @@ class ActionExtractor:
             "to": contact["telegram"],
             "body": body,
         }
+
+    def extract_file_task(self, query: str, model_choice: str = "auto") -> dict:
+        """
+        Turn a "write/create/save a file" instruction into {path, content}. For a coding
+        task the model writes the actual solution. The path is validated again by the
+        WorkspaceAgent before anything is written to disk.
+        """
+        prompt = FILE_TASK_PROMPT.format(query=query)
+        raw = self.llm.invoke(prompt, model_choice=model_choice)
+        return _parse_file_task(raw)

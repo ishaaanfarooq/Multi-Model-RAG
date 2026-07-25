@@ -220,6 +220,21 @@ def approve_action(action_id: str):
             orchestrator.actions.resolve(action_id, "failed", str(e))
             raise HTTPException(status_code=502, detail=str(e))
 
+    if kind == "file":
+        # The write and the workspace-confinement check both live in WorkspaceAgent;
+        # a path that escapes praxis-workspace/ raises here and is refused.
+        try:
+            result = orchestrator.workspace.write_file(payload["path"], payload["content"])
+        except ValueError as e:  # path escaped the workspace
+            orchestrator.actions.resolve(action_id, "failed", str(e))
+            raise HTTPException(status_code=403, detail=str(e))
+        except Exception as e:
+            orchestrator.actions.resolve(action_id, "failed", str(e))
+            raise HTTPException(status_code=502, detail=f"Failed to write file: {e}")
+        editor_note = orchestrator.workspace.open_in_editor(payload["path"])
+        resolved = orchestrator.actions.resolve(action_id, "sent", result["path"])
+        return {"status": "sent", "action": resolved, "path": result["path"], "editor": editor_note}
+
     raise HTTPException(status_code=400, detail=f"Unknown action kind '{kind}'.")
 
 
@@ -254,8 +269,20 @@ def integrations_status():
             "bot": orchestrator.telegram.bot_username,
             "error": orchestrator.telegram._init_error,
         },
+        "workspace": {
+            "available": orchestrator.workspace.available,
+            "dir": orchestrator.workspace.workspace_dir,
+            "files": len(orchestrator.workspace.list_files()),
+            "error": orchestrator.workspace._init_error,
+        },
         "contacts": len(orchestrator.contacts.contacts),
     }
+
+
+@router.get("/workspace/files")
+def workspace_files():
+    """List the files currently in the workspace."""
+    return {"dir": orchestrator.workspace.workspace_dir, "files": orchestrator.workspace.list_files()}
 
 @router.get("/stream")
 async def pipeline_stream(query: str, history: str = "", model_choice: str = "auto", request: Request = None):

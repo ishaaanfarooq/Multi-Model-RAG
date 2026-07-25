@@ -19,6 +19,7 @@ from actions.extractor import ActionExtractor, scan_for_injection
 from actions.gmail_client import GmailClient
 from actions.whatsapp_client import WhatsAppClient
 from actions.telegram_client import TelegramClient
+from actions.workspace import WorkspaceAgent
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class MasterOrchestrator:
         self.gmail = GmailClient()
         self.whatsapp = WhatsAppClient()
         self.telegram = TelegramClient()
+        self.workspace = WorkspaceAgent()
 
     async def process_query_stream(self, query: str, history: str = "", image_context: str = "", model_choice: str = "auto") -> AsyncGenerator[str, None]:
         """
@@ -265,13 +267,62 @@ Rewritten:"""
             draft = self.actions.create_draft(kind, payload, query)
             yield emit(label, "Completed", f"Draft ready for {payload['recipient_name']} — awaiting your approval")
 
+            channel_label = {"email": "email", "whatsapp": "WhatsApp message", "telegram": "Telegram message"}[kind]
             summary = (
-                f"I've drafted this {'email' if kind == 'email' else 'WhatsApp message'} "
-                f"to **{payload['recipient_name']}**. Nothing has been sent — review it "
-                f"and press Approve to send, or Reject to discard."
+                f"I've drafted this {channel_label} to **{payload['recipient_name']}**. "
+                f"Nothing has been sent — review it and press Approve to send, or Reject to discard."
             )
             yield emit("Final Response", "Completed", "Awaiting approval", {
                 "answer": summary,
+                "sources": [],
+                "pending_action": draft,
+            })
+            return
+
+        # ─── WORKSPACE FILE branch (draft only — never writes) ────────────────
+        # Highest-privilege action: it writes a real file. Same containment as messaging —
+        # extraction reads the RAW `query` (never retrieved documents), the WorkspaceAgent
+        # confines every path to praxis-workspace/, and nothing hits disk without approval.
+        if tool == "Workspace_Task":
+            label = "Workspace Agent"
+            if not self.workspace.available:
+                self.actions.audit_blocked(self.workspace._init_error, "file", {}, query)
+                yield emit(label, "Completed", "Workspace not available")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": f"I can't write files right now — {self.workspace._init_error}",
+                    "sources": [],
+                })
+                return
+
+            # Prefer Claude for code generation when it's configured; otherwise use the
+            # model the user picked (Qwen works, just weaker at coding).
+            coding_choice = "claude" if self.generator.llm.claude_client else model_choice
+            yield emit(label, "Processing", f"Writing the file with {self.generator.llm.get_active_model_name(coding_choice)} (confined to praxis-workspace/)")
+            try:
+                payload = await asyncio.to_thread(self.extractor.extract_file_task, query, coding_choice)
+                # Validate the path stays inside the workspace up-front, so a bad path is
+                # caught now rather than at approval time.
+                self.workspace._safe_path(payload["path"])
+            except ValueError as e:
+                self.actions.audit_blocked(str(e), "file", {"raw_query": query}, query)
+                yield emit(label, "Completed", "Blocked: path escapes the workspace")
+                yield emit("Final Response", "Completed", "Done", {"answer": str(e), "sources": []})
+                return
+            except Exception as e:
+                logger.error(f"Workspace extraction failed: {e}")
+                yield emit(label, "Completed", "Could not produce the file")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": f"I couldn't work out the file to create. Try e.g. "
+                              f"\"write a python script that reverses a string, save as reverse.py\". ({str(e)[:80]})",
+                    "sources": [],
+                })
+                return
+
+            draft = self.actions.create_draft("file", payload, query)
+            yield emit(label, "Completed", f"Draft ready: {payload['path']} — awaiting your approval")
+            yield emit("Final Response", "Completed", "Awaiting approval", {
+                "answer": f"I've drafted **{payload['path']}**. Nothing has been written yet — "
+                          f"review it and press Approve to save it to your workspace, or Reject to discard.",
                 "sources": [],
                 "pending_action": draft,
             })

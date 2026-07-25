@@ -25,9 +25,10 @@ class AgentRouter:
 3. "Vision_Analysis": Choose this if the user is asking about an image, a picture, a screenshot, or specifically mentions "the image", "what's in the photo", or "read this text" (referring to an uploaded file).
 4. "Send_Email": Choose this if the user is INSTRUCTING you to send/write/compose/draft an email or mail to someone (e.g. "email Ali about the meeting", "send a mail to my supervisor").
 5. "Send_Telegram": Choose this if the user is INSTRUCTING you to send a message/text/WhatsApp/Telegram to someone (e.g. "message Ali", "text mom", "telegram Ali the notes", "whatsapp Ali that I'll be late"). All chat/message sends go here.
-6. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
-7. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
-8. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
+6. "Workspace_Task": Choose this if the user is INSTRUCTING you to create/write/save a FILE, write code/a script/program, build a file, or solve a coding problem and save it (e.g. "make a python file that sorts a list", "write a script to rename files", "create index.html", "solve this and save as sol.py", "open vscode and make a file").
+7. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
+8. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
+9. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
 
 Note the difference: sending mail is "Send_Email", but asking about mail you received is "Read_Email".
 
@@ -61,6 +62,7 @@ Tool Selection:'''
                 # mapped to Send_Telegram in the prompt above. Kept out of the parse list
                 # so it can never be selected; re-add it here to bring WhatsApp back.
                 "Send_Telegram",
+                "Workspace_Task",
                 "Read_Email",
                 "Ambiguous_Query",
                 "Vision_Analysis",

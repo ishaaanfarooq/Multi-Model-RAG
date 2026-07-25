@@ -265,6 +265,11 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
         throw new Error(data.detail || `Request failed (${res.status})`);
       }
 
+      // File saves report the path (and whether VS Code opened); messages just confirm.
+      const okDetail = data.path
+        ? `Saved to praxis-workspace/${data.path}.${data.editor ? " " + data.editor : ""}`
+        : "Sent successfully.";
+
       setMessages((prev) =>
         prev.map((m) =>
           m.id === messageId
@@ -273,7 +278,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
                 pendingAction: undefined,
                 actionOutcome: {
                   status: approve ? "sent" : "rejected",
-                  detail: approve ? "Sent successfully." : "Discarded — nothing was sent.",
+                  detail: approve ? okDetail : "Discarded — nothing was written.",
                 },
               }
             : m
@@ -779,44 +784,59 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
                 {msg.pendingAction && (
                   <div className="mt-5 rounded-2xl border-2 border-brass-300 bg-brass-50/60 overflow-hidden">
                     <div className="flex items-center gap-2 px-5 py-3 bg-brass-100/70 border-b border-brass-200">
-                      {msg.pendingAction.kind === "email" ? (
+                      {msg.pendingAction.kind === "email" || msg.pendingAction.kind === "file" ? (
                         <DocumentIcon className="w-4 h-4 text-brass-700" />
                       ) : (
                         <ChatIcon className="w-4 h-4 text-brass-700" />
                       )}
                       <span className="text-[11px] font-semibold uppercase tracking-widest text-brass-800">
                         {msg.pendingAction.kind === "email"
-                          ? "Draft email"
+                          ? "Draft email · not sent"
                           : msg.pendingAction.kind === "telegram"
-                          ? "Draft Telegram"
-                          : "Draft WhatsApp"}{" "}
-                        · not sent
+                          ? "Draft Telegram · not sent"
+                          : msg.pendingAction.kind === "file"
+                          ? "Draft file · not saved"
+                          : "Draft WhatsApp · not sent"}
                       </span>
                     </div>
 
-                    <div className="px-5 py-4 space-y-2.5">
-                      <div className="flex gap-3 text-[13px]">
-                        <span className="w-16 flex-shrink-0 font-semibold text-stone-500">To</span>
-                        <span className="text-ink font-medium">
-                          {msg.pendingAction.payload.recipient_name}{" "}
-                          <span className="text-stone-500 font-normal">
-                            &lt;{msg.pendingAction.payload.to}&gt;
+                    {msg.pendingAction.kind === "file" ? (
+                      <div className="px-5 py-4 space-y-2.5">
+                        <div className="flex items-center gap-2 text-[13px]">
+                          <span className="font-semibold text-stone-500">File</span>
+                          <span className="font-mono font-semibold text-brass-700">
+                            praxis-workspace/{msg.pendingAction.payload.path}
                           </span>
-                        </span>
-                      </div>
-                      {msg.pendingAction.payload.subject && (
-                        <div className="flex gap-3 text-[13px]">
-                          <span className="w-16 flex-shrink-0 font-semibold text-stone-500">Subject</span>
-                          <span className="text-ink font-medium">{msg.pendingAction.payload.subject}</span>
                         </div>
-                      )}
-                      <div className="flex gap-3 text-[13px]">
-                        <span className="w-16 flex-shrink-0 font-semibold text-stone-500">Message</span>
-                        <span className="text-ink-light whitespace-pre-wrap leading-relaxed">
-                          {msg.pendingAction.payload.body}
-                        </span>
+                        <pre className="max-h-[320px] overflow-auto rounded-xl bg-cream-100 border border-cream-300 p-3.5 text-[12px] leading-relaxed font-mono text-ink whitespace-pre">
+                          {msg.pendingAction.payload.content}
+                        </pre>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="px-5 py-4 space-y-2.5">
+                        <div className="flex gap-3 text-[13px]">
+                          <span className="w-16 flex-shrink-0 font-semibold text-stone-500">To</span>
+                          <span className="text-ink font-medium">
+                            {msg.pendingAction.payload.recipient_name}{" "}
+                            <span className="text-stone-500 font-normal">
+                              &lt;{msg.pendingAction.payload.to}&gt;
+                            </span>
+                          </span>
+                        </div>
+                        {msg.pendingAction.payload.subject && (
+                          <div className="flex gap-3 text-[13px]">
+                            <span className="w-16 flex-shrink-0 font-semibold text-stone-500">Subject</span>
+                            <span className="text-ink font-medium">{msg.pendingAction.payload.subject}</span>
+                          </div>
+                        )}
+                        <div className="flex gap-3 text-[13px]">
+                          <span className="w-16 flex-shrink-0 font-semibold text-stone-500">Message</span>
+                          <span className="text-ink-light whitespace-pre-wrap leading-relaxed">
+                            {msg.pendingAction.payload.body}
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-3 px-5 py-3 bg-white/60 border-t border-brass-200">
                       <button
@@ -824,7 +844,9 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
                         disabled={resolvingAction === msg.pendingAction.id}
                         className="btn-premium !py-2 !px-5 !text-[13px] rounded-xl"
                       >
-                        {resolvingAction === msg.pendingAction.id ? "Sending…" : "Approve & send"}
+                        {resolvingAction === msg.pendingAction.id
+                          ? (msg.pendingAction.kind === "file" ? "Saving…" : "Sending…")
+                          : (msg.pendingAction.kind === "file" ? "Approve & save" : "Approve & send")}
                       </button>
                       <button
                         onClick={() => resolveAction(msg.id, msg.pendingAction!.id, false)}
@@ -834,7 +856,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
                         Reject
                       </button>
                       <span className="ml-auto text-[10px] text-stone-500 italic">
-                        Nothing is sent until you approve
+                        {msg.pendingAction.kind === "file" ? "Nothing is written until you approve" : "Nothing is sent until you approve"}
                       </span>
                     </div>
                   </div>

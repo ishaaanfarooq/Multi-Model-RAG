@@ -10,6 +10,8 @@ services:
       - faiss_data:/app/faiss_index
       - upload_data:/app/uploads
       - action_data:/app/data
+      # Workspace files land here on the HOST so "make this file" produces something real.
+      - ./praxis-workspace:/app/praxis-workspace
     environment:
       - AWS_REGION=${AWS_REGION:-us-east-1}
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
@@ -29,6 +31,7 @@ services:
       - REDIS_PORT=${REDIS_PORT:-6379}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - DATA_DIR=/app/data
+      - WORKSPACE_DIR=/app/praxis-workspace
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped

@@ -38,3 +38,7 @@ backend/token.json
 backend/contacts.json
 backend/data/
 backend/action_audit.jsonl
+
+# Agent-created files
+praxis-workspace/*
+!praxis-workspace/.gitkeep

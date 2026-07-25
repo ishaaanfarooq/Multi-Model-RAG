@@ -12,6 +12,7 @@ Run:  cd backend && source venv/bin/activate && python -m pytest tests/ -v
 """
 
 import os
+import shutil
 import sys
 import tempfile
 
@@ -22,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from actions.contacts import ContactsStore
 from actions.extractor import ActionExtractor, scan_for_injection
 from actions.registry import ActionRegistry
+from actions.workspace import WorkspaceAgent
 
 
 @pytest.fixture
@@ -42,6 +44,13 @@ def registry():
         path = f.name
     yield ActionRegistry(audit_path=path)
     os.unlink(path)
+
+
+@pytest.fixture
+def workspace():
+    d = tempfile.mkdtemp(prefix="praxis_ws_")
+    yield WorkspaceAgent(workspace_dir=d)
+    shutil.rmtree(d, ignore_errors=True)
 
 
 class FakeLLM:
@@ -205,3 +214,59 @@ def test_audit_records_the_full_lifecycle(registry):
 
     events = [e["event"] for e in registry.read_audit()]
     assert "drafted" in events and "sent" in events
+
+
+# ── Workspace agent: files can never escape the workspace ─────────────────────
+
+def test_workspace_writes_inside_the_box(workspace):
+    r = workspace.write_file("solve.py", "print('hi')\n")
+    assert r["path"] == "solve.py"
+    assert workspace.read_file("solve.py") == "print('hi')\n"
+
+
+def test_workspace_allows_subdirectories(workspace):
+    workspace.write_file("src/app/main.py", "x = 1\n")
+    assert "src/app/main.py" in workspace.list_files()
+
+
+@pytest.mark.parametrize("bad", [
+    "../escape.txt",
+    "../../etc/passwd",
+    "/etc/passwd",
+    "/home/user/.ssh/id_rsa",
+    "~/.ssh/id_rsa",
+    "sub/../../escape.txt",
+])
+def test_workspace_rejects_path_traversal(workspace, bad):
+    with pytest.raises(ValueError):
+        workspace.write_file(bad, "malicious")
+
+
+def test_workspace_confines_dotty_names_without_escaping(workspace):
+    """
+    "....//" is not real traversal — the segments are literal dirnames, not "..".
+    So it must NOT escape: it's written safely inside the box, and never lands
+    above the workspace root.
+    """
+    r = workspace.write_file("....//....//note.txt", "safe")
+    assert r["abs_path"].startswith(workspace.workspace_dir + os.sep)
+    assert os.path.isfile(r["abs_path"])
+
+
+def test_workspace_traversal_leaves_no_file_outside(workspace, tmp_path):
+    """Belt-and-braces: even the resolved target must stay in the box."""
+    outside = os.path.join(os.path.dirname(workspace.workspace_dir), "leaked.txt")
+    with pytest.raises(ValueError):
+        workspace.write_file(f"../{os.path.basename(outside)}", "leak")
+    assert not os.path.exists(outside)
+
+
+def test_workspace_extract_produces_path_and_content(workspace):
+    llm = FakeLLM("FILENAME: reverse.py\nCONTENT:\nprint('cba')\n")
+    from actions.contacts import ContactsStore
+    extractor = ActionExtractor(llm, ContactsStore(path=os.devnull + ".json"))
+    task = extractor.extract_file_task("write a script, save as reverse.py")
+    assert task["path"] == "reverse.py"
+    assert "print" in task["content"]
+    # and it must pass the workspace's own path check
+    workspace._safe_path(task["path"])

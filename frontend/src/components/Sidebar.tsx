@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon, CloseIcon, PanelLeftIcon } from "@/components/icons";
 import type { Conversation } from "@/lib/conversations";
+import type { ThemeName } from "@/lib/theme";
 import ConfirmDialog from "@/components/ConfirmDialog";
 
 export type ViewType = "chat" | "upload" | "crawl" | "pipeline";
@@ -19,6 +20,8 @@ interface SidebarProps {
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, title: string) => void;
   onCollapse: () => void;
+  theme: ThemeName;
+  onToggleTheme: () => void;
 }
 
 const navItems: { id: ViewType; label: string; desc: string; Icon: typeof ChatIcon }[] = [
@@ -38,6 +41,8 @@ export default function Sidebar({
   onDeleteChat,
   onRenameChat,
   onCollapse,
+  theme,
+  onToggleTheme,
 }: SidebarProps) {
   const [backendStatus, setBackendStatus] = useState<"online" | "offline" | "checking">("checking");
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -238,6 +243,29 @@ export default function Sidebar({
             <div className="flex items-center justify-between px-1">
               <span className="text-[11px] font-semibold text-stone-500">Model</span>
               <span className="text-[11px] font-semibold text-ink">Qwen2.5 3B</span>
+            </div>
+            <div className="h-px bg-cream-300" />
+            {/* Theme switch — Cream (warm) vs HUD (dark terminal) */}
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-semibold text-stone-500">Theme</span>
+              <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-cream-100 border border-cream-300">
+                <button
+                  onClick={() => theme !== "cream" && onToggleTheme()}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                    theme === "cream" ? "bg-brass-500 text-white" : "text-stone-500 hover:text-ink"
+                  }`}
+                >
+                  Cream
+                </button>
+                <button
+                  onClick={() => theme !== "hud" && onToggleTheme()}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                    theme === "hud" ? "bg-brass-500 text-white" : "text-stone-500 hover:text-ink"
+                  }`}
+                >
+                  HUD
+                </button>
+              </div>
             </div>
           </div>
         </div>

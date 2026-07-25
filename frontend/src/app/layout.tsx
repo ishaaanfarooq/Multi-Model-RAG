@@ -14,6 +14,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Apply the saved theme before first paint to avoid a flash of the wrong theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem('mmrag.theme.v1')==='hud')document.documentElement.dataset.theme='hud';}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="font-sans bg-[var(--color-background)] text-[var(--color-foreground)] antialiased">
         {children}
       </body>

@@ -1,20 +1,34 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ThemeName } from "@/lib/theme";
+
+// Fog palettes per theme. Cream = warm brass/parchment; HUD = neon cyan on black.
+const PALETTES: Record<ThemeName, Record<string, number>> = {
+  cream: {
+    highlightColor: 0xd4ad68, // brass-300
+    midtoneColor: 0xa97a3a, // brass-500
+    lowlightColor: 0xf0e8d6, // cream-200
+    baseColor: 0xf7f2e7, // cream-100 (page bg)
+  },
+  hud: {
+    highlightColor: 0x08c0d0, // neon cyan
+    midtoneColor: 0x0f5563, // deep teal
+    lowlightColor: 0x0a1622, // dark blue
+    baseColor: 0x0a0d11, // page bg (near black)
+  },
+};
 
 /**
- * Animated ambient backdrop (Vanta FOG), tinted to the Praxis brass/cream palette.
- *
- * It sits *behind* the opaque content card, so it adds motion without ever
- * competing with text for legibility. Three things keep it well-behaved:
- *  - loaded lazily on the client only (Vanta touches window/WebGL at import time),
- *  - disabled when the user prefers reduced motion,
- *  - paused while the tab is hidden, so it isn't burning GPU next to local
- *    LLM inference when nobody's looking.
+ * Animated ambient backdrop (Vanta FOG), tinted to the active theme. It sits behind
+ * the opaque content card, so it adds motion without competing with text for legibility.
+ * Well-behaved by design: loaded lazily client-only, skipped under prefers-reduced-motion,
+ * torn down while the tab is hidden (so it isn't burning GPU next to local LLM inference),
+ * and it re-tints when the theme changes.
  */
-export default function VantaBackground() {
+export default function VantaBackground({ theme }: { theme: ThemeName }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const effectRef = useRef<{ destroy: () => void } | null>(null);
+  const effectRef = useRef<{ destroy: () => void; setOptions: (o: Record<string, unknown>) => void } | null>(null);
   const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
@@ -42,15 +56,10 @@ export default function VantaBackground() {
           gyroControls: false,
           minHeight: 200.0,
           minWidth: 200.0,
-          // Brass / cream palette so the motion reads as warm parchment,
-          // not the usual neon Vanta look.
-          highlightColor: 0xd4ad68, // brass-300
-          midtoneColor: 0xa97a3a, // brass-500
-          lowlightColor: 0xf0e8d6, // cream-200
-          baseColor: 0xf7f2e7, // cream-100 (page background)
           blurFactor: 0.62,
           speed: 0.9,
           zoom: 0.75,
+          ...PALETTES[theme],
         });
       } catch (err) {
         // WebGL unavailable (software rendering, old driver) — fall back to the
@@ -74,7 +83,13 @@ export default function VantaBackground() {
       effectRef.current?.destroy();
       effectRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Re-tint live when the theme changes, without tearing down the whole effect.
+  useEffect(() => {
+    effectRef.current?.setOptions(PALETTES[theme]);
+  }, [theme]);
 
   return (
     <>
@@ -87,9 +102,8 @@ export default function VantaBackground() {
           enabled ? "opacity-[0.55]" : "opacity-0"
         }`}
       />
-      {/* Dot texture stays on top of the fog — it's what gives the surface its
-          "engineered paper" feel, and it covers us if WebGL fails. */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.35] bg-[radial-gradient(#D2C3A5_1px,transparent_1px)] [background-size:26px_26px]" />
+      {/* Dot texture layered on top — themes via the cream-400 variable. */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.35] bg-[radial-gradient(rgb(var(--cream-400))_1px,transparent_1px)] [background-size:26px_26px]" />
     </>
   );
 }

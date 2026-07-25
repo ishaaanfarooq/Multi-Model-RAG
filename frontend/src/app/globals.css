@@ -1,47 +1,124 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Two themes, one variable set. Palette colors are stored as space-separated RGB
+  channels so Tailwind's `rgb(var(--x) / <alpha-value>)` (see tailwind.config.ts) keeps
+  opacity modifiers working. Flipping `data-theme` on <html> re-themes the whole app.
+
+  :root                -> Cream (warm editorial, the default)
+  [data-theme='hud']   -> HUD (dark cyberpunk terminal, dionysus-inspired)
+*/
 :root {
-  /* Core Palette: Classic Cream & Brass (Light) */
+  /* Semantic full-color tokens (used directly in CSS below) */
   --color-background: #F7F2E7;
   --color-foreground: #2A2318;
   --color-surface: #FFFFFF;
   --color-surface-hover: #FBF7EE;
   --color-border: #E3D8C1;
   --color-border-bright: #D2C3A5;
-
   --color-accent: #A97A3A;
   --color-accent-secondary: #8F6530;
   --color-accent-gradient-from: #C0924A;
   --color-accent-gradient-to: #A97A3A;
-
   --color-muted: #8A8171;
   --color-success: #3A5D40;
   --color-warning: #A97A3A;
   --color-error: #8A362F;
+  --color-on-accent: #FFFFFF;
+
+  /* Palette (RGB channels) consumed by Tailwind utilities */
+  --white: 255 255 255;
+  --ink: 42 35 24;
+  --ink-light: 74 64 51;
+  --stone-50: 250 248 244;
+  --stone-400: 167 156 135;
+  --stone-500: 138 129 113;
+  --stone-600: 107 100 85;
+  --cream-50: 254 253 250;
+  --cream-100: 247 242 231;
+  --cream-200: 240 232 214;
+  --cream-300: 227 216 193;
+  --cream-400: 210 195 165;
+  --brass-50: 250 243 230;
+  --brass-100: 242 226 192;
+  --brass-200: 230 203 152;
+  --brass-300: 212 173 104;
+  --brass-400: 192 146 74;
+  --brass-500: 169 122 58;
+  --brass-600: 143 101 48;
+  --brass-700: 110 78 38;
+  --brass-800: 84 57 28;
+  --brass-900: 61 40 20;
+  --sage-50: 238 244 236;
+  --sage-100: 220 233 215;
+  --sage-500: 76 122 82;
+  --sage-700: 58 93 64;
+  --brick-50: 251 237 235;
+  --brick-100: 245 217 212;
+  --brick-500: 176 70 62;
+  --brick-700: 138 54 47;
 
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --radius-lg: 24px;
   --radius-md: 16px;
   --radius-sm: 12px;
 }
 
-[data-theme='dark'] {
-  --color-background: #1C1712;
-  --color-foreground: #F3ECDD;
-  --color-surface: #262019;
-  --color-surface-hover: #2F2820;
-  --color-border: #3A3126;
-  --color-border-bright: #4A3F30;
+/* ── HUD: dark cyberpunk terminal (dionysus-inspired) ─────────────────────── */
+[data-theme='hud'] {
+  --color-background: #0A0D11;
+  --color-foreground: #9CDEF2;
+  --color-surface: #0D1218;
+  --color-surface-hover: #12171D;
+  --color-border: #1F2A33;
+  --color-border-bright: #2A3A44;
+  --color-accent: #08C0D0;
+  --color-accent-secondary: #3DD6E0;
+  --color-accent-gradient-from: #08A0B8;
+  --color-accent-gradient-to: #08C0D0;
+  --color-muted: #7A96A1;
+  --color-success: #56B6C2;
+  --color-warning: #E5C07B;
+  --color-error: #E06C75;
+  --color-on-accent: #04161B;
 
-  --color-accent: #D4AD68;
-  --color-accent-secondary: #E6CB98;
-  --color-muted: #A79C87;
+  --white: 13 18 24;           /* dark panel — makes bg-white panels dark */
+  --ink: 156 222 242;          /* light cyan — main text */
+  --ink-light: 127 184 204;
+  --stone-50: 20 26 32;
+  --stone-400: 74 101 112;
+  --stone-500: 128 156 166;
+  --stone-600: 150 178 188;
+  --cream-50: 15 20 26;
+  --cream-100: 10 13 17;
+  --cream-200: 18 23 29;
+  --cream-300: 31 42 51;
+  --cream-400: 42 58 68;
+  --brass-50: 13 26 31;
+  --brass-100: 15 32 39;
+  --brass-200: 22 68 80;
+  --brass-300: 42 125 140;
+  --brass-400: 8 160 184;
+  --brass-500: 8 192 208;      /* neon cyan — the signature accent */
+  --brass-600: 61 214 224;
+  --brass-700: 97 175 239;
+  --brass-800: 74 144 208;
+  --brass-900: 10 26 42;
+  --sage-50: 13 31 24;
+  --sage-100: 18 51 42;
+  --sage-500: 86 182 194;
+  --sage-700: 127 209 192;
+  --brick-50: 31 18 22;
+  --brick-100: 51 24 30;
+  --brick-500: 224 108 117;
+  --brick-700: 240 135 146;
 }
 
 /* === Base Styles === */
@@ -50,23 +127,14 @@
   scrollbar-color: var(--color-border-bright) transparent;
 }
 
-*::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-
-*::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
   background: var(--color-border-bright);
   border-radius: 10px;
 }
 
-html {
-  background: var(--color-background);
-}
+html { background: var(--color-background); }
 
 body {
   color: var(--color-foreground);
@@ -79,6 +147,16 @@ h1, h2, h3, h4, .font-heading {
   font-family: var(--font-display);
 }
 
+/* In HUD, the whole surface goes monospace — the terminal feel — and headings
+   pick up a faint neon glow. */
+[data-theme='hud'] body { font-family: var(--font-mono); letter-spacing: 0.01em; }
+[data-theme='hud'] h1, [data-theme='hud'] h2, [data-theme='hud'] h3,
+[data-theme='hud'] h4, [data-theme='hud'] .font-heading {
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 18px rgb(var(--brass-500) / 0.25);
+}
+
 /* === Defined Containers === */
 .structural-card {
   background: var(--color-surface);
@@ -87,23 +165,29 @@ h1, h2, h3, h4, .font-heading {
   box-shadow: 0 4px 6px -1px rgb(42 35 24 / 0.04), 0 2px 4px -2px rgb(42 35 24 / 0.04);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .structural-card:hover {
   box-shadow: 0 12px 20px -6px rgb(42 35 24 / 0.08), 0 4px 8px -4px rgb(42 35 24 / 0.06);
 }
+[data-theme='hud'] .structural-card {
+  border-color: rgb(var(--brass-500) / 0.22);
+  box-shadow: 0 0 0 1px rgb(var(--brass-500) / 0.06), 0 0 40px rgb(var(--brass-500) / 0.05);
+}
+[data-theme='hud'] .structural-card:hover {
+  box-shadow: 0 0 0 1px rgb(var(--brass-500) / 0.14), 0 0 55px rgb(var(--brass-500) / 0.09);
+}
 
-/* === Glassmorphism: Frosted Cream === */
+/* === Glassmorphism === */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.72);
+  background: rgb(var(--white) / 0.72);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(227, 216, 193, 0.6);
+  border: 1px solid rgb(var(--cream-300) / 0.6);
   border-radius: var(--radius-lg);
 }
 
 /* === Refined Inputs === */
 .input-warm {
-  background: #FBF7EE;
+  background: var(--color-surface-hover);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   color: var(--color-foreground);
@@ -114,17 +198,16 @@ h1, h2, h3, h4, .font-heading {
   transition: all 0.3s ease;
   width: 100%;
 }
-
 .input-warm:focus {
   border-color: var(--color-accent);
-  background: #FFFFFF;
-  box-shadow: 0 0 0 4px rgba(169, 122, 58, 0.1);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px rgb(var(--brass-500) / 0.12);
 }
 
 /* === Premium Buttons === */
 .btn-premium {
   background: var(--color-accent);
-  color: #FFFFFF;
+  color: var(--color-on-accent);
   font-weight: 600;
   padding: 12px 28px;
   border-radius: var(--radius-md);
@@ -138,24 +221,18 @@ h1, h2, h3, h4, .font-heading {
   justify-content: center;
   gap: 8px;
 }
-
 .btn-premium:hover:not(:disabled) {
   background: var(--color-accent-secondary);
   transform: translateY(-1.5px);
-  box-shadow: 0 10px 20px -10px rgba(169, 122, 58, 0.55);
+  box-shadow: 0 10px 20px -10px rgb(var(--brass-500) / 0.55);
 }
-
-.btn-premium:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.btn-premium:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.btn-premium:active:not(:disabled) { transform: translateY(0); }
+.btn-premium:disabled { opacity: 0.5; cursor: not-allowed; }
+[data-theme='hud'] .btn-premium { box-shadow: 0 0 18px rgb(var(--brass-500) / 0.35); }
+[data-theme='hud'] .btn-premium:hover:not(:disabled) { box-shadow: 0 0 26px rgb(var(--brass-500) / 0.55); }
 
 .btn-secondary {
-  background: #FBF7EE;
+  background: var(--color-surface-hover);
   color: var(--color-foreground);
   font-weight: 600;
   padding: 12px 28px;
@@ -169,53 +246,43 @@ h1, h2, h3, h4, .font-heading {
   justify-content: center;
   gap: 8px;
 }
-
 .btn-secondary:hover:not(:disabled) {
   border-color: var(--color-accent);
   color: var(--color-accent-secondary);
-  background: #FFFFFF;
+  background: var(--color-surface);
 }
 
 /* === Animations === */
 @keyframes structural-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 .animate-structural-up {
   animation: structural-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 @keyframes shimmer {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
 
-/* === Chat Bubble Refinement === */
+/* === Chat Bubbles === */
 .bubble-user {
   background: var(--color-accent);
-  color: #FFFFFF;
+  color: var(--color-on-accent);
   border-radius: 20px 20px 4px 20px;
   padding: 14px 18px;
-  box-shadow: 0 4px 14px rgba(169, 122, 58, 0.18);
+  box-shadow: 0 4px 14px rgb(var(--brass-500) / 0.18);
 }
-
 .bubble-ai {
-  background: #FFFFFF;
+  background: var(--color-surface);
   border: 1px solid var(--color-border);
   color: var(--color-foreground);
   border-radius: 20px 20px 20px 4px;
   padding: 16px 20px;
-  box-shadow: 0 2px 10px rgba(42, 35, 24, 0.04);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.04);
 }
 
-/* === Status Indicators === */
+/* === Status Badges === */
 .badge-clean {
   display: inline-flex;
   align-items: center;
@@ -226,15 +293,13 @@ h1, h2, h3, h4, .font-heading {
   font-weight: 600;
   border: 1px solid transparent;
 }
-
 .badge-success {
-  background: #EEF4EC;
-  color: #3A5D40;
-  border-color: #DCE9D7;
+  background: rgb(var(--sage-50));
+  color: rgb(var(--sage-700));
+  border-color: rgb(var(--sage-100));
 }
-
 .badge-amber {
-  background: #FAF3E6;
-  color: #8F6530;
-  border-color: #F2E2C0;
+  background: rgb(var(--brass-50));
+  color: rgb(var(--brass-600));
+  border-color: rgb(var(--brass-100));
 }

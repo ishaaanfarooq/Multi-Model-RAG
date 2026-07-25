@@ -7,6 +7,7 @@ import IngestPanel from "@/components/IngestPanel";
 import CrawlPanel from "@/components/CrawlPanel";
 import PipelineVisualizer from "@/components/PipelineVisualizer";
 import { useConversations } from "@/lib/conversations";
+import { useTheme } from "@/lib/theme";
 import { PanelLeftIcon } from "@/components/icons";
 import VantaBackground from "@/components/VantaBackground";
 
@@ -16,6 +17,7 @@ export default function UnifiedPage() {
   const [activeView, setActiveView] = useState<ViewType>("chat");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const chats = useConversations();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   // Remember the collapsed state across reloads.
   useEffect(() => {
@@ -64,6 +66,8 @@ export default function UnifiedPage() {
           onDeleteChat={chats.deleteChat}
           onRenameChat={chats.renameChat}
           onCollapse={toggleSidebar}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
       </div>
 
@@ -80,7 +84,7 @@ export default function UnifiedPage() {
           </button>
         )}
 
-        <VantaBackground />
+        <VantaBackground theme={theme} />
 
         <div className="relative flex-1 flex flex-col min-h-0 p-6 lg:p-8 z-10">
           <div className="max-w-6xl mx-auto w-full flex-1 flex flex-col min-h-0 structural-card overflow-hidden">

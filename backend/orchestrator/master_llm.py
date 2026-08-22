@@ -446,6 +446,63 @@ Rewritten:"""
                 tool = "Web_Search"
 
         # ─── DIRECT CHAT branch ────────────────────────────────────────────
+        # ─── VISUALIZE DATA branch (chart the numbers in the user's message) ──
+        # "make a bar chart: Jan 100, Feb 75, ..." — the data is already in the query, so
+        # there is no retrieval and nothing is invented. We lay the data out cleanly, then
+        # render a chart from the user's OWN message. This is deliberately separate from
+        # Workspace_Task (which saves a .py file to disk) and from Web_Search (which is for
+        # figures that must be looked up first).
+        if tool == "Visualize_Data":
+            # Guard against the weak router's mistakes deterministically: if the message
+            # has no numbers to plot, the user must want data we don't have yet (e.g.
+            # "chart Samsung's revenue"). Hand off to Web_Search to FIND it first, rather
+            # than asking them for figures they expect us to look up. (Two+ numbers = data
+            # in the message; a lone year like "2025" is not enough.)
+            data_numbers = re.findall(r"\d[\d,\.]*", query)
+            if len(data_numbers) < 2:
+                yield emit("Agent Router", "Completed", "No figures in the message — searching the web for the data first")
+                tool = "Web_Search"
+
+        if tool == "Visualize_Data":
+            yield emit("Visualizer Agent", "Processing", "Reading the data from your message")
+            try:
+                # Two-step, robust with a small local model: (1) the LLM only EXTRACTS the
+                # numbers as JSON — a task Qwen handles well — and (2) we render the chart
+                # with a fixed, correct matplotlib template. This is why the chart shows the
+                # user's real figures and never a hallucinated placeholder or a code crash.
+                data = await asyncio.to_thread(self.visualizer.extract_data_points, query, model_choice)
+                points, title, kind = data["points"], data["title"], data["kind"]
+
+                yield emit("Verification & Visualization", "Processing",
+                           f"Rendering a {kind} chart of {len(points)} data points")
+                chart_filename = await asyncio.to_thread(
+                    self.visualizer.render_data_chart, points, title, kind
+                )
+
+                # Build the chat answer from the SAME parsed data, so the text and the chart
+                # can never disagree and nothing is invented downstream.
+                table = "| Label | Value |\n|---|---|\n" + "\n".join(f"| {l} | {v:g} |" for l, v in points)
+                answer = f"Here's a {kind} chart of **{title}** from the data you gave:\n\n{table}"
+
+                final_details = {
+                    "answer": answer,
+                    "sources": ["User-provided Data"],
+                    "chart": f"/uploads/{chart_filename}",
+                }
+                yield emit("Visualizer Agent", "Completed", "Data chart generated successfully",
+                           {"chart": f"/uploads/{chart_filename}"})
+                self.cache.set(query, history, image_context, final_details)
+                yield emit("Final Response", "Completed", "Pipeline finished", final_details)
+            except Exception as e:
+                logger.error(f"Visualize_Data failed: {e}")
+                yield emit("Visualizer Agent", "Completed", "Couldn't build a chart from that")
+                yield emit("Final Response", "Completed", "Done", {
+                    "answer": ("I couldn't pull clear numbers to chart from that. Try giving explicit "
+                               "label/value pairs, e.g. \"bar chart: Jan 100, Feb 75, Mar 50\"."),
+                    "sources": [],
+                })
+            return
+
         if tool == "Direct_Chat":
             yield emit("Direct Chat", "Processing", "Engaging directly without retrieval")
             try:
@@ -514,7 +571,6 @@ Rewritten:"""
                     gen_context = [f"[Image Analysis]:\n{image_context}"] + doc_texts
                 
                 # Inject user-provided data if the query contains rich data points
-                import re
                 has_rich_data = False
                 if any(char in query for char in ["$", "%", "="]) or any(kw in query.lower() for kw in ["is ", "are ", "value ", "ratio "]):
                     numbers = re.findall(r'\d+', query)
@@ -624,7 +680,6 @@ Rewritten:"""
             gen_context = [f"[Image Analysis]:\n{image_context}"] + ranked_docs
             
         # Inject user-provided data if the query contains rich data points
-        import re
         has_rich_data = False
         if any(char in query for char in ["$", "%", "="]) or any(kw in query.lower() for kw in ["is ", "are ", "value ", "ratio "]):
             numbers = re.findall(r'\d+', query)

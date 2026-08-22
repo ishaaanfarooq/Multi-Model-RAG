@@ -25,12 +25,13 @@ class AgentRouter:
 3. "Vision_Analysis": Choose this if the user is asking about an image, a picture, a screenshot, or specifically mentions "the image", "what's in the photo", or "read this text" (referring to an uploaded file).
 4. "Send_Email": Choose this if the user is INSTRUCTING you to send/write/compose/draft an email or mail to someone (e.g. "email Ali about the meeting", "send a mail to my supervisor").
 5. "Send_Telegram": Choose this if the user is INSTRUCTING you to send a message/text/WhatsApp/Telegram to someone (e.g. "message Ali", "text mom", "telegram Ali the notes", "whatsapp Ali that I'll be late"). All chat/message sends go here.
-6. "Workspace_Task": Choose this if the user is INSTRUCTING you to create/write/save a FILE, write code/a script/program, build a file, or solve a coding problem and save it (e.g. "make a python file that sorts a list", "write a script to rename files", "create index.html", "solve this and save as sol.py", "open vscode and make a file").
-7. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
-8. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
-9. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
+6. "Workspace_Task": Choose this ONLY if the user wants to SAVE A FILE to disk — write code/a script/program into a file, create a named file, or solve a coding problem and save it (e.g. "make a python file that sorts a list", "write a script to rename files", "create index.html", "solve this and save as sol.py", "open vscode and make a file"). Do NOT pick this just because the user says "make"/"create" — if they want to SEE a chart/graph/plot in the chat rather than save a file, use "Visualize_Data".
+7. "Visualize_Data": Choose this if the user wants to SEE a chart/graph/plot/visualization rendered in the chat FROM DATA THEY PROVIDED in the message (e.g. "make a bar chart: Jan 100, Feb 75, Mar 50", "plot these numbers", "graph this data", "chart the sales figures I just gave you"). Note: if the numbers must be looked up first because they are NOT in the message (e.g. "chart Samsung's 2025 revenue"), use "Web_Search" instead.
+8. "Read_Email": Choose this if the user is asking ABOUT their inbox or received mail (e.g. "any unread emails?", "summarize my inbox", "what did my supervisor email me?").
+9. "Direct_Chat": Choose this ONLY for greetings, small talk, or generic conversational questions that need no external data.
+10. "Ambiguous_Query": Choose this if the user's query is highly ambiguous, extremely short (like a single word or acronym), or lacks enough context to perform a meaningful search (e.g., "apple", "the project", "what is AAPL").
 
-Note the difference: sending mail is "Send_Email", but asking about mail you received is "Read_Email".
+Note the difference: sending mail is "Send_Email", but asking about mail you received is "Read_Email". Saving code/text to a file is "Workspace_Task", but drawing a chart from data in the message is "Visualize_Data".
 
 User Query: "{query}"
 
@@ -63,6 +64,7 @@ Tool Selection:'''
                 # so it can never be selected; re-add it here to bring WhatsApp back.
                 "Send_Telegram",
                 "Workspace_Task",
+                "Visualize_Data",
                 "Read_Email",
                 "Ambiguous_Query",
                 "Vision_Analysis",

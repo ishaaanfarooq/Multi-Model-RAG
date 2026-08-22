@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import uuid
 import tempfile
 import subprocess
@@ -8,6 +9,12 @@ from core.llm_provider import DualLLM
 from langchain_core.prompts import PromptTemplate
 
 logger = logging.getLogger(__name__)
+
+# A brand-neutral, accessible palette reused by the deterministic renderer.
+_CHART_PALETTE = [
+    "#6366F1", "#8B5CF6", "#EC4899", "#F43F5E", "#10B981", "#34D399",
+    "#0D9488", "#0EA5E9", "#F59E0B", "#475569", "#A855F7", "#14B8A6",
+]
 
 class VisualizerAgent:
     """
@@ -157,6 +164,113 @@ Corrected Python Code:"""
 
         logger.error(f"VisualizerAgent: Failed to generate chart after {attempts} attempts.")
         return None
+
+    # ── Deterministic path: extract data as JSON, render with a fixed template ────
+    # Small local models reliably PULL numbers out as JSON but cannot reliably WRITE
+    # matplotlib (they hallucinate placeholder data and buggy code). So when the user
+    # explicitly asks for a chart of data in their message, we only ask the model for the
+    # data, then draw it ourselves — the chart always shows the real numbers and never
+    # crashes on a hallucinated syntax error.
+    _EXTRACT_PROMPT = (
+        "Extract the chart data from the user's message as STRICT JSON only, with this shape:\n"
+        '{{"title": "...", "kind": "bar|line|pie", "points": [{{"label": "Jan", "value": 100}}]}}\n'
+        "Rules:\n"
+        "- Use ONLY numbers that appear in the message. Never invent placeholder categories.\n"
+        "- If the user states a numeric pattern and asks to continue it (e.g. 'decreasing by 25 "
+        "each month for all 12 months'), continue exactly that pattern for the full range.\n"
+        "- kind = 'line' for a time series (months, years, dates); 'pie' for parts of a whole; "
+        "otherwise 'bar'.\n"
+        "- Output ONLY the JSON. No markdown fences, no explanation.\n\n"
+        "User message:\n{user_text}"
+    )
+
+    def extract_data_points(self, user_text: str, model_choice: str = "auto") -> dict:
+        """Returns {'title', 'kind', 'points': [(label, value), ...]} or raises ValueError."""
+        raw = self.llm.invoke(self._EXTRACT_PROMPT.format(user_text=user_text), model_choice=model_choice)
+        data = self._parse_json(raw)
+
+        clean: list[tuple[str, float]] = []
+        for p in (data.get("points") or []):
+            try:
+                label = str(p.get("label")).strip()
+                value = float(p.get("value"))
+            except (TypeError, ValueError, AttributeError):
+                continue
+            if label and label.lower() != "none":
+                clean.append((label, value))
+
+        if not clean:
+            raise ValueError("No numeric data points could be extracted from the message.")
+
+        kind = str(data.get("kind", "bar")).lower().strip()
+        if kind not in ("bar", "line", "pie"):
+            kind = "bar"
+        # A pie needs non-negative slices; fall back to bars if the data goes negative.
+        if kind == "pie" and any(v <= 0 for _, v in clean):
+            kind = "bar"
+        title = (str(data.get("title") or "Chart").strip() or "Chart")[:80]
+        return {"title": title, "kind": kind, "points": clean}
+
+    @staticmethod
+    def _parse_json(raw: str) -> dict:
+        text = (raw or "").strip()
+        text = re.sub(r"^```(?:json)?", "", text).strip()
+        text = re.sub(r"```$", "", text).strip()
+        start, end = text.find("{"), text.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            text = text[start:end + 1]
+        try:
+            return json.loads(text)
+        except Exception as e:
+            raise ValueError(f"Could not parse chart JSON ({e}).")
+
+    def render_data_chart(self, points: list, title: str = "Chart", kind: str = "bar") -> str:
+        """
+        Render a chart from explicit (label, value) pairs with a FIXED, correct template.
+        No LLM-generated code — returns the saved filename.
+        """
+        import matplotlib
+        matplotlib.use("Agg")  # headless; no display in Docker
+        import matplotlib.pyplot as plt
+
+        labels = [str(l) for l, _ in points]
+        values = [float(v) for _, v in points]
+        colors = [_CHART_PALETTE[i % len(_CHART_PALETTE)] for i in range(len(labels))]
+
+        filename = f"chart_{uuid.uuid4().hex[:8]}.png"
+        output_path = os.path.join(self.output_dir, filename)
+
+        fig, ax = plt.subplots(figsize=(9, 5), facecolor="#F8FAFC")
+        ax.set_facecolor("#F8FAFC")
+
+        if kind == "line":
+            ax.plot(labels, values, linewidth=2.5, marker="o", markersize=6,
+                    markerfacecolor="white", markeredgecolor="#6366F1",
+                    markeredgewidth=2, color="#6366F1")
+        elif kind == "pie":
+            ax.pie(values, labels=labels, colors=colors, autopct="%1.0f%%",
+                   wedgeprops=dict(width=0.4, edgecolor="w"), textprops=dict(color="#334155"))
+            ax.axis("equal")
+        else:
+            bars = ax.bar(labels, values, color=colors)
+            ax.bar_label(bars, padding=3, fontsize=9, fontweight="semibold", color="#334155")
+
+        if kind != "pie":
+            ax.spines["top"].set_visible(False)
+            ax.spines["right"].set_visible(False)
+            ax.spines["left"].set_color("#94A3B8")
+            ax.spines["bottom"].set_color("#94A3B8")
+            ax.grid(axis="y", linestyle="--", alpha=0.3, color="#CBD5E1")
+            ax.set_axisbelow(True)
+            if len(labels) > 6 or max((len(l) for l in labels), default=0) > 3:
+                plt.setp(ax.get_xticklabels(), rotation=15, ha="right")
+
+        ax.set_title(title, pad=20, fontsize=14, fontweight="bold", color="#1E293B")
+        plt.tight_layout()
+        fig.savefig(output_path, dpi=130)
+        plt.close(fig)
+        logger.info(f"VisualizerAgent: rendered {kind} chart ({len(points)} pts) -> {filename}")
+        return filename
 
     def _clean_code(self, response: str) -> str:
         # Try finding markdown code block first

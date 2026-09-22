@@ -298,14 +298,16 @@ def main():
     from actions.extractor import ActionExtractor
     from actions.registry import ActionRegistry
     from actions.workspace import WorkspaceAgent
-    from core.llm_provider import LLMProvider
     from models.generation import GenerationModel
 
     gen = GenerationModel()
     contacts = ContactsStore()
     registry = ActionRegistry()
     workspace = WorkspaceAgent()
-    extractor = ActionExtractor(LLMProvider(), contacts)
+    # Production builds the extractor from the generator's own LLM handle
+    # (orchestrator/master_llm.py:112); constructing a second provider here would
+    # measure a path the system never takes.
+    extractor = ActionExtractor(gen.llm, contacts)
 
     rows_in = load_jsonl("injection.jsonl", args.limit)
     t0 = time.time()

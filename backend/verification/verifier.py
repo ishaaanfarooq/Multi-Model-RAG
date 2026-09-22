@@ -1,4 +1,28 @@
+import os
+
 from core.llm_provider import DualLLM
+from verification.specifics import unsupported_specifics
+
+SPECIFICS_REASON_PREFIX = "The answer states specifics that do not appear in the sources: "
+
+
+def unsupported_specifics_reason(missing: list[str], limit: int = 5) -> str:
+    shown = ", ".join(f"'{m}'" for m in missing[:limit])
+    more = f" (and {len(missing) - limit} more)" if len(missing) > limit else ""
+    return f"{SPECIFICS_REASON_PREFIX}{shown}{more}."
+
+
+GENERIC_WARNING = "The AI's answer may contain information not fully supported by the retrieved source documents."
+
+
+def warning_for(reason: str, fallback: str = GENERIC_WARNING) -> str:
+    """The banner shown with a flagged answer. When it was flagged for unsupported specifics the
+    banner names them - 'mentions 41.2 and A100, which the sources do not' is something a reader
+    can act on. Otherwise each pipeline branch keeps its own wording via `fallback`."""
+    if reason and reason.startswith(SPECIFICS_REASON_PREFIX):
+        listed = reason[len(SPECIFICS_REASON_PREFIX):].rstrip(".")
+        return f"Check before relying on this: the answer mentions {listed}, which do not appear in the retrieved sources."
+    return fallback
 from langchain_core.prompts import PromptTemplate
 
 class VerificationModule:
@@ -30,6 +54,7 @@ Verification Output:"""
     # model call. Between: ask the model. Measured on the evaluation set the proxy is
     # decisive at the extremes; the 3B judge is lenient and slow (it re-reads every
     # source chunk), so it is spent only where it can change the verdict.
+    CHECK_SPECIFICS = os.getenv("VERIFY_SPECIFICS", "1").lower() not in ("0", "false", "no")
     SUPPORT_PASS = 0.75
     SUPPORT_FAIL = 0.30
     JUDGE_CHUNKS = 3
@@ -41,10 +66,17 @@ Verification Output:"""
         if not context:
             return False, "No context provided for verification."
         support = lexical_support(answer, context)
-        if support >= self.SUPPORT_PASS:
-            return True, f"Answer sentences are supported by the sources (lexical support {support:.2f})."
         if support <= self.SUPPORT_FAIL:
             return False, f"Most answer sentences use words absent from the sources (lexical support {support:.2f})."
+        # Concrete claims the sources never mention. Runs BEFORE the auto-pass, because that is where
+        # they slipped through: a changed figure leaves every other word supported, and one invented
+        # sentence barely moves a long answer's average. Measured (eval/VERIFIER.md).
+        if self.CHECK_SPECIFICS:
+            missing = unsupported_specifics(answer, context)
+            if missing:
+                return False, unsupported_specifics_reason(missing)
+        if support >= self.SUPPORT_PASS:
+            return True, f"Answer sentences are supported by the sources (lexical support {support:.2f})."
         trimmed = [c[: self.JUDGE_CHUNK_CHARS] for c in context[: self.JUDGE_CHUNKS]]
         ok, reason = await self.verify(answer, trimmed, model_choice=model_choice)
         return ok, f"{reason} (lexical support {support:.2f}; model consulted)"

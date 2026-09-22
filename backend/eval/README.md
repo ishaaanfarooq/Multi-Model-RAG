@@ -63,6 +63,17 @@ orchestrator redirects them (e.g. `Visualize_Data` with no numbers in the messag
 to `Web_Search`). The runner reports **strict** accuracy (router alone) and **effective**
 accuracy (router plus guards). The gap between them is the value of the guards.
 
+## Is the verifier right? (`python -m eval.verifier_eval`)
+
+The other suites grade answers; this one grades the *verification label*. It builds answers whose
+groundedness is known by construction (a real correct answer; the same with one invented sentence; with a
+vague invented sentence; with one figure changed; a correct answer to a different question) and records
+what lexical support alone, the LLM judge, and the shipped `verify_fast` say about each. Results and limits:
+[`VERIFIER.md`](VERIFIER.md). Headline: specific fabrications 0.71 → 1.00 and swapped numbers 0.33 → 1.00
+after the unsupported-specifics check (`verification/specifics.py`), with the model consulted less often;
+vague fabrications remain at 0.56 and are the open problem. Each run also saves its full cases
+(`results/verifier_cases_*.json`) so a deterministic rule can be re-examined offline in seconds.
+
 ## Is a difference real? (`python -m eval.significance`)
 
 Point estimates on 64 questions are not enough: one question is 1.6 points, and generation is sampled.

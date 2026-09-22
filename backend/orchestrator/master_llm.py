@@ -24,6 +24,7 @@ from actions.workspace import WorkspaceAgent, resolve_existing_target
 from core.conversation_state import ConversationStore
 from core.request_trace import RequestTrace, TraceLog
 from retrieval.reranker import KB_ANSWER_MIN_SCORE, below_answer_floor
+from verification.verifier import warning_for
 
 logger = logging.getLogger(__name__)
 
@@ -784,11 +785,11 @@ Rewritten:"""
                         yield emit("Verification Module", "Completed", f"Verification flagged potential inaccuracies: {verify_reason}")
                         if retry_count < max_retries:
                             yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
-                            strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context only."
+                            strict_query = search_query + f"\n\nCRITICAL INSTRUCTION: The previous answer failed verification: {verify_reason} Regenerate the answer and adhere STRICTLY to the provided context only; do not state anything the context does not contain."
                             answer = await self.generator.generate_answer(strict_query, gen_context, sources=sources, mode="analytical", model_choice=model_choice)
                             retry_count += 1
                         else:
-                            warning = "The AI may not have found all details in the retrieved web sources. Treat specific figures as approximate."
+                            warning = warning_for(verify_reason, fallback="The AI may not have found all details in the retrieved web sources. Treat specific figures as approximate.")
                             chart_filename = current_chart_filename
                             break
 
@@ -928,11 +929,11 @@ Rewritten:"""
                 yield emit("Verification Module", "Completed", f"Verification flagged potential inaccuracies: {verify_reason}")
                 if retry_count < max_retries:
                     yield emit("Self-Healing", "Processing", f"Hallucination detected. Regenerating response strictly from context (Attempt {retry_count + 1})...")
-                    strict_query = search_query + "\n\nCRITICAL INSTRUCTION: The previous answer contained hallucinations. You must regenerate the answer and adhere STRICTLY to the provided context only."
+                    strict_query = search_query + f"\n\nCRITICAL INSTRUCTION: The previous answer failed verification: {verify_reason} Regenerate the answer and adhere STRICTLY to the provided context only; do not state anything the context does not contain."
                     answer = await self.generator.generate_answer(strict_query, gen_context, sources=list(set(sources)), mode="analytical", model_choice=model_choice)
                     retry_count += 1
                 else:
-                    warning = "The AI's answer may contain information not fully supported by the retrieved source documents despite self-healing attempts."
+                    warning = warning_for(verify_reason)
                     chart_filename = current_chart_filename
                     break
 

@@ -1,8 +1,10 @@
 import os
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router as api_router
+from auth.routes import router as auth_router
+from auth.dependencies import require_user
 from utils.logger_config import setup_logging
 import logging
 
@@ -23,7 +25,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router, prefix="/api")
+app.include_router(auth_router, prefix="/api/auth")
+# Every existing /api/* route now needs a signed-in user (except /api/health, see auth.dependencies).
+app.include_router(api_router, prefix="/api", dependencies=[Depends(require_user)])
 
 # Ensure uploads directory exists with proper error handling
 try:

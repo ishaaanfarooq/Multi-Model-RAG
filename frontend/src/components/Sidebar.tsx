@@ -5,6 +5,7 @@ import { ChatIcon, DocumentIcon, GlobeIcon, PulseIcon, CloseIcon, PanelLeftIcon 
 import type { Conversation } from "@/lib/conversations";
 import type { ThemeName } from "@/lib/theme";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import UserMenu from "@/components/auth/UserMenu";
 
 export type ViewType = "chat" | "upload" | "crawl" | "pipeline";
 
@@ -269,6 +270,7 @@ export default function Sidebar({
             </div>
           </div>
         </div>
+        <UserMenu />
       </div>
 
       <ConfirmDialog

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { GlobeIcon, CheckIcon, WarningIcon, LinkIcon } from "@/components/icons";
+import { withToken } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -49,7 +50,7 @@ export default function CrawlPanel() {
       max_depth: "2",
     });
 
-    const eventSource = new EventSource(`${API_BASE}/api/crawl/stream?${params}`);
+    const eventSource = new EventSource(withToken(`${API_BASE}/api/crawl/stream?${params}`));
 
     eventSource.onmessage = (event) => {
       try {

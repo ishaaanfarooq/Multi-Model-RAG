@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { UploadCloudIcon, CheckIcon, WarningIcon, DocumentIcon } from "@/components/icons";
+import { authHeaders } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -31,6 +32,7 @@ export default function IngestPanel() {
     try {
       const response = await fetch(`${API_BASE}/api/ingest`, {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
       });
 

@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import ImageViewer from "@/components/ImageViewer";
 import { DocumentIcon, GlobeIcon, ImageIcon, MicIcon, SendIcon, CloseIcon, WarningIcon, CheckIcon, ChatIcon, StopIcon } from "@/components/icons";
 import type { Message, PendingAction, PipelineStage } from "@/lib/conversations";
+import { authHeaders, withToken } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -352,6 +353,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
     try {
       const res = await fetch(`${API_BASE}/api/actions/${actionId}/${approve ? "approve" : "reject"}`, {
         method: "POST",
+        headers: authHeaders(),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -412,6 +414,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
 
     const response = await fetch(`${API_BASE}/api/ingest`, {
       method: "POST",
+      headers: authHeaders(),
       body: formData,
     });
 
@@ -425,7 +428,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
   const crawlUrl = async (url: string) => {
     const response = await fetch(`${API_BASE}/api/crawl`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ url, max_pages: 15, max_depth: 2 }),
     });
 
@@ -531,6 +534,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
       abortControllerRef.current = controller;
       fetch(`${API_BASE}/api/stream`, {
         method: "POST",
+        headers: authHeaders(),
         body: formData,
         signal: controller.signal,
       }).then(async (response) => {
@@ -576,7 +580,7 @@ export default function QueryPanel({ messages, setMessages, conversationId }: Qu
       // Text-only: use EventSource (GET). The `_` cache-buster guarantees the browser
       // never replays a previously cached stream for an identical query+history.
       const eventSource = new EventSource(
-        `${API_BASE}/api/stream?query=${encodeURIComponent(effectiveQuery)}&history=${encodeURIComponent(formatHistory())}&model_choice=${encodeURIComponent(modelChoice)}&conversation_id=${encodeURIComponent(conversationId ?? "")}&_=${Date.now()}`
+        withToken(`${API_BASE}/api/stream?query=${encodeURIComponent(effectiveQuery)}&history=${encodeURIComponent(formatHistory())}&model_choice=${encodeURIComponent(modelChoice)}&conversation_id=${encodeURIComponent(conversationId ?? "")}&_=${Date.now()}`)
       );
       eventSourceRef.current = eventSource;
 

@@ -17,6 +17,8 @@ langchain-community==0.0.29
 langchain-text-splitters==0.0.1
 faiss-cpu==1.8.0
 python-dotenv==1.0.1
+PyJWT==2.15.1
+bcrypt==4.2.1
 pypdf==4.1.0
 pypdfium2==5.13.0   # renders PDF pages for OCR of scanned documents (self-contained, no apt)
 beautifulsoup4==4.12.3

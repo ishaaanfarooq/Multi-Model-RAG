@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { WarningIcon } from "@/components/icons";
+import { withToken } from "@/lib/auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -37,7 +38,7 @@ export default function PipelineVisualizer() {
     setIsRunning(true);
 
     const eventSource = new EventSource(
-      `${API_BASE}/api/stream?query=${encodeURIComponent(query)}`
+      withToken(`${API_BASE}/api/stream?query=${encodeURIComponent(query)}`)
     );
 
     eventSource.onmessage = (event) => {

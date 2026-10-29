@@ -10,10 +10,11 @@ import { useConversations } from "@/lib/conversations";
 import { useTheme } from "@/lib/theme";
 import { PanelLeftIcon } from "@/components/icons";
 import VantaBackground from "@/components/VantaBackground";
+import AuthGuard from "@/components/auth/AuthGuard";
 
 const SIDEBAR_KEY = "mmrag.sidebarCollapsed";
 
-export default function UnifiedPage() {
+function UnifiedPage() {
   const [activeView, setActiveView] = useState<ViewType>("chat");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const chats = useConversations();
@@ -118,5 +119,14 @@ export default function UnifiedPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+// Signed-out visitors are sent to /login before the workspace mounts.
+export default function ProtectedUnifiedPage() {
+  return (
+    <AuthGuard>
+      <UnifiedPage />
+    </AuthGuard>
   );
 }
